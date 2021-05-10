@@ -7,9 +7,11 @@ const TITLE_FONT_SIZE = 13;
 const IMAGE_HEIGHT = 26;
 const ABSTRACT_FONT_SIZE = 10;
 
-const ITEM_PADDING = 1.5;
+const MIN_ITEM_MARGIN = 1.5;
 const ITEM_CONTENT_HEIGHT = TITLE_FONT_SIZE + IMAGE_HEIGHT;
-const ITEM_HEIGHT = ITEM_CONTENT_HEIGHT + ITEM_PADDING * 2;
+const MIN_ITEM_HEIGHT = ITEM_CONTENT_HEIGHT + MIN_ITEM_MARGIN * 2;
+
+const WIDGET_TOP_BOTTOM_MARGIN = 7;
 
 const BG_CONTENT_OPACITY_LIGHT = 0.1;
 const BG_CONTENT_OPACITY_DARK = 0.15;
@@ -31,9 +33,26 @@ async function mainWidget() {
                 return renderError(ctx);
             }
 
-            const itemPerColumn = Math.floor(
-                (displaySize.height - 5) / ITEM_HEIGHT
+            // estimate number of items pre column
+            let itemPerColumn = Math.floor(
+                displaySize.height / MIN_ITEM_HEIGHT
             );
+            // estimate the space left
+            let remainingSpace =
+                displaySize.height - itemPerColumn * MIN_ITEM_HEIGHT;
+            // enough margin in the top and bottom of widget
+            if (remainingSpace < WIDGET_TOP_BOTTOM_MARGIN * 2) {
+                --itemPerColumn;
+                remainingSpace += MIN_ITEM_HEIGHT;
+            }
+            const extraRemainingSpace =
+                remainingSpace - WIDGET_TOP_BOTTOM_MARGIN * 2;
+            // distribute the extra remaining space
+            const estimatedItemMargin =
+                MIN_ITEM_MARGIN + extraRemainingSpace / itemPerColumn / 2;
+            const estimatedItemHeight =
+                ITEM_CONTENT_HEIGHT + estimatedItemMargin * 2;
+
             const numColumn = family === 0 ? 1 : 2;
             const itemWidth =
                 (displaySize.width - 10 * (2 + numColumn - 1)) / numColumn;
@@ -57,6 +76,7 @@ async function mainWidget() {
                         itemPerColumn,
                         numColumn,
                         itemWidth,
+                        estimatedItemHeight,
                         family
                     ),
                 ],
@@ -185,12 +205,19 @@ function renderUpdatingTime(date, { family, isDarkMode }) {
     };
 }
 
-function renderPosts(items, itemPerColumn, numColumn, itemWidth, family) {
+function renderPosts(
+    items,
+    itemPerColumn,
+    numColumn,
+    itemWidth,
+    estimatedItemHeight,
+    family
+) {
     return {
         type: 'hgrid',
         props: {
             rows: Array(itemPerColumn).fill({
-                fixed: ITEM_HEIGHT,
+                fixed: estimatedItemHeight,
                 spacing: 0,
             }),
             spacing: 10,
@@ -198,13 +225,13 @@ function renderPosts(items, itemPerColumn, numColumn, itemWidth, family) {
         views: [
             ...items
                 .slice(0, itemPerColumn * numColumn - 1)
-                .map(renderItem.bind(null, itemWidth)),
+                .map(renderItem.bind(null, itemWidth, estimatedItemHeight)),
             renderFixedItem(family, itemWidth),
         ],
     };
 }
 
-function renderItem(itemWidth, item) {
+function renderItem(itemWidth, estimatedItemHeight, item) {
     const { title, link, abstract, imgUrls } = item;
     return {
         type: 'vstack',
@@ -213,7 +240,7 @@ function renderItem(itemWidth, item) {
             link: OPEN_IN_SAFARI ? link : getLinkOpenedInJSBox(link),
             frame: {
                 maxWidth: Infinity,
-                height: ITEM_HEIGHT,
+                height: estimatedItemHeight,
                 width: itemWidth,
                 alignment: $widget.alignment.leading,
             },
