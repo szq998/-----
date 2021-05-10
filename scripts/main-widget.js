@@ -230,7 +230,7 @@ function renderItemDetail(abstract, imgUrls) {
             frame: {
                 maxWidth: Infinity,
                 alignment:
-                    shownImgUrls.length > 1
+                    shownImgUrls.length == 3
                         ? $widget.alignment.center
                         : $widget.alignment.trailing,
             },
