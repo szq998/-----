@@ -34,24 +34,11 @@ async function mainWidget() {
             }
 
             // estimate number of items pre column
-            let itemPerColumn = Math.floor(
-                displaySize.height / MIN_ITEM_HEIGHT
-            );
-            // estimate the space left
-            let remainingSpace =
-                displaySize.height - itemPerColumn * MIN_ITEM_HEIGHT;
-            // enough margin in the top and bottom of widget
-            if (remainingSpace < WIDGET_TOP_BOTTOM_MARGIN * 2) {
-                --itemPerColumn;
-                remainingSpace += MIN_ITEM_HEIGHT;
-            }
-            const extraRemainingSpace =
-                remainingSpace - WIDGET_TOP_BOTTOM_MARGIN * 2;
-            // distribute the extra remaining space
-            const estimatedItemMargin =
-                MIN_ITEM_MARGIN + extraRemainingSpace / itemPerColumn / 2;
-            const estimatedItemHeight =
-                ITEM_CONTENT_HEIGHT + estimatedItemMargin * 2;
+            // and item height
+            const [
+                itemPerColumn,
+                itemHeight,
+            ] = estimateItemPerColumnAndItemHeight(displaySize.height);
 
             const numColumn = family === 0 ? 1 : 2;
             const itemWidth =
@@ -76,13 +63,30 @@ async function mainWidget() {
                         itemPerColumn,
                         numColumn,
                         itemWidth,
-                        estimatedItemHeight,
+                        itemHeight,
                         family
                     ),
                 ],
             };
         },
     });
+}
+
+function estimateItemPerColumnAndItemHeight(widgetHeight) {
+    let itemPerColumn = Math.floor(widgetHeight / MIN_ITEM_HEIGHT);
+    // estimate the space left
+    let remainingSpace = widgetHeight - itemPerColumn * MIN_ITEM_HEIGHT;
+    // make sure enough margin in the top and bottom of widget
+    if (remainingSpace < WIDGET_TOP_BOTTOM_MARGIN * 2) {
+        --itemPerColumn;
+        remainingSpace += MIN_ITEM_HEIGHT;
+    }
+    const extraRemainingSpace = remainingSpace - WIDGET_TOP_BOTTOM_MARGIN * 2;
+    // distribute the extra remaining space
+    const itemMargin =
+        MIN_ITEM_MARGIN + extraRemainingSpace / itemPerColumn / 2;
+    const itemHeight = ITEM_CONTENT_HEIGHT + itemMargin * 2;
+    return [itemPerColumn, itemHeight];
 }
 
 async function fetchEntryWithCache() {
@@ -210,14 +214,14 @@ function renderPosts(
     itemPerColumn,
     numColumn,
     itemWidth,
-    estimatedItemHeight,
+    itemHeight,
     family
 ) {
     return {
         type: 'hgrid',
         props: {
             rows: Array(itemPerColumn).fill({
-                fixed: estimatedItemHeight,
+                fixed: itemHeight,
                 spacing: 0,
             }),
             spacing: 10,
@@ -225,13 +229,13 @@ function renderPosts(
         views: [
             ...items
                 .slice(0, itemPerColumn * numColumn - 1)
-                .map(renderItem.bind(null, itemWidth, estimatedItemHeight)),
+                .map(renderItem.bind(null, itemWidth, itemHeight)),
             renderFixedItem(family, itemWidth),
         ],
     };
 }
 
-function renderItem(itemWidth, estimatedItemHeight, item) {
+function renderItem(itemWidth, itemHeight, item) {
     const { title, link, abstract, imgUrls } = item;
     return {
         type: 'vstack',
@@ -240,7 +244,7 @@ function renderItem(itemWidth, estimatedItemHeight, item) {
             link: OPEN_IN_SAFARI ? link : getLinkOpenedInJSBox(link),
             frame: {
                 maxWidth: Infinity,
-                height: estimatedItemHeight,
+                height: itemHeight,
                 width: itemWidth,
                 alignment: $widget.alignment.leading,
             },
