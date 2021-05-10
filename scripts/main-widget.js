@@ -237,6 +237,8 @@ function renderPosts(
 
 function renderItem(itemWidth, itemHeight, item) {
     const { title, link, abstract, imgUrls } = item;
+    // 没有摘要和图片时，标题最多可以有两行
+    const titleLineLimit = abstract || imgUrls.length ? 1 : 2;
     return {
         type: 'vstack',
         props: {
@@ -249,18 +251,21 @@ function renderItem(itemWidth, itemHeight, item) {
                 alignment: $widget.alignment.leading,
             },
         },
-        views: [renderItemTitle(title), renderItemDetail(abstract, imgUrls)],
+        views: [
+            renderItemTitle(title, titleLineLimit),
+            renderItemDetail(abstract, imgUrls),
+        ],
     };
 }
 
-function renderItemTitle(title) {
+function renderItemTitle(title, lineLimit) {
     return {
         type: 'text',
         props: {
             text: title,
             font: $font('bold', TITLE_FONT_SIZE),
             color: $color('#444', '#eee'),
-            lineLimit: 1,
+            lineLimit,
             frame: {
                 maxWidth: Infinity,
                 alignment: $widget.alignment.leading,
