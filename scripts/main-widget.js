@@ -17,34 +17,8 @@ const BG_CONTENT_OPACITY_DARK = 0.15;
 const tiebaName = $widget.inputValue;
 
 async function mainWidget() {
-    let items = null;
-    let date = null;
-    try {
-        if (!tiebaName) {
-            throw new Error('No Tieba name provided');
-        }
-        items = await doWithTimeout(getTiebaPost, 10000, tiebaName);
-        date = new Date();
-        $cache.setAsync({
-            key: tiebaName,
-            value: { items, date },
-        });
-    } catch (e) {
-        console.error(e);
-        if (tiebaName) {
-            const cached = await $cache.getAsync(tiebaName);
-            if (cached && cached.items && cached.date) {
-                ({ items, date } = cached);
-            }
-        }
-    }
-
-    const entry = {
-        info: items,
-        date,
-    };
     $widget.setTimeline({
-        entries: [entry],
+        entries: [await fetchEntryWithCache()],
         policy: { atEnd: true },
         render: (ctx) => {
             const {
@@ -54,27 +28,7 @@ async function mainWidget() {
             } = ctx;
 
             if (!Array.isArray(items)) {
-                return {
-                    type: 'zstack',
-                    props: {
-                        widgetURL: `jsbox://run?name=${encodeURIComponent(
-                            $addin.current.name
-                        )}`,
-                    },
-                    views: [
-                        renderBackground(ctx),
-                        {
-                            type: 'text',
-                            props: {
-                                padding: 15,
-                                minimumScaleFactor: 0.5,
-                                text: tiebaName
-                                    ? `"${tiebaName}吧"加载失败\n请检查网络连接和贴吧名`
-                                    : `使用方法：\n    1. 点击进入主应用\n    2. 添加贴吧\n    3. 回到主屏幕\n    4. 长按编辑小组件\n    5. 在输入参数中选择要展示的贴吧`,
-                            },
-                        },
-                    ],
-                };
+                return renderError(ctx);
             }
 
             const itemPerColumn = Math.floor(
@@ -88,18 +42,6 @@ async function mainWidget() {
                 tiebaName
             )}&ie=utf-8`;
 
-            const fixedItem = {
-                type: 'text',
-                props: {
-                    text: tiebaName + '吧',
-                    frame: {
-                        width: itemWidth,
-                    },
-                    font: $font('bold', family === 2 ? 26 : 20),
-                    minimumScaleFactor: 0.3,
-                },
-            };
-
             return {
                 type: 'zstack',
                 props: {
@@ -111,16 +53,92 @@ async function mainWidget() {
                     renderBackground(ctx),
                     renderUpdatingTime(date, ctx),
                     renderPosts(
-                        fixedItem,
                         items,
                         itemPerColumn,
                         numColumn,
-                        itemWidth
+                        itemWidth,
+                        family
                     ),
                 ],
             };
         },
     });
+}
+
+async function fetchEntryWithCache() {
+    let items = null;
+    let date = null;
+    try {
+        // if tiebaName set
+        if (!tiebaName) {
+            throw new Error('No Tieba name provided');
+        }
+        // if latest update happened in a minute
+        const cached = await $cache.getAsync(tiebaName);
+        if (
+            cached &&
+            cached.items &&
+            cached.date &&
+            new Date() - cached.date < 60000
+        ) {
+            ({ items, date } = cached);
+        } else {
+            items = await doWithTimeout(getTiebaPost, 10000, tiebaName);
+            date = new Date();
+            $cache.setAsync({
+                key: tiebaName,
+                value: { items, date },
+            });
+        }
+    } catch (e) {
+        console.error(e);
+        if (tiebaName) {
+            const cached = await $cache.getAsync(tiebaName);
+            if (cached && cached.items && cached.date) {
+                ({ items, date } = cached);
+            }
+        }
+    }
+    return {
+        info: items,
+        date,
+    };
+}
+
+function renderError(ctx) {
+    return {
+        type: 'zstack',
+        props: {
+            widgetURL: `jsbox://run?name=${encodeURIComponent(
+                $addin.current.name
+            )}`,
+        },
+        views: [
+            renderBackground(ctx),
+            {
+                type: 'text',
+                props: {
+                    padding: 15,
+                    minimumScaleFactor: 0.5,
+                    text: tiebaName
+                        ? `"${tiebaName}吧"加载失败\n请检查网络连接和贴吧名`
+                        : `使用方法：\n    1. 点击进入主应用\n    2. 添加贴吧\n    3. 回到主屏幕\n    4. 长按编辑小组件\n    5. 在输入参数中选择要展示的贴吧`,
+                },
+            },
+        ],
+    };
+}
+
+function renderFixedItem(family, itemWidth) {
+    return {
+        type: 'text',
+        props: {
+            text: tiebaName + '吧',
+            frame: { width: itemWidth },
+            font: $font('bold', family === 2 ? 26 : 20),
+            minimumScaleFactor: 0.3,
+        },
+    };
 }
 
 function renderBackground() {
@@ -167,7 +185,7 @@ function renderUpdatingTime(date, { family, isDarkMode }) {
     };
 }
 
-function renderPosts(fixedItem, items, itemPerColumn, numColumn, itemWidth) {
+function renderPosts(items, itemPerColumn, numColumn, itemWidth, family) {
     return {
         type: 'hgrid',
         props: {
@@ -181,7 +199,7 @@ function renderPosts(fixedItem, items, itemPerColumn, numColumn, itemWidth) {
             ...items
                 .slice(0, itemPerColumn * numColumn - 1)
                 .map(renderItem.bind(null, itemWidth)),
-            fixedItem,
+            renderFixedItem(family, itemWidth),
         ],
     };
 }
