@@ -35,10 +35,8 @@ async function mainWidget() {
 
             // estimate number of items pre column
             // and item height
-            const [
-                itemPerColumn,
-                itemHeight,
-            ] = estimateItemPerColumnAndItemHeight(displaySize.height);
+            const [itemPerColumn, itemHeight] =
+                estimateItemPerColumnAndItemHeight(displaySize.height);
 
             const numColumn = family === 0 ? 1 : 2;
             const itemWidth =
@@ -337,7 +335,8 @@ function renderItemDetailAbstract(abstract) {
             lineLimit: 2,
             frame: {
                 maxWidth: Infinity,
-                alignment: $widget.alignment.leading,
+                height: IMAGE_HEIGHT,
+                alignment: $widget.alignment.topLeading,
             },
             minimumScaleFactor: 0.8,
         },
