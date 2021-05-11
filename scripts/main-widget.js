@@ -227,11 +227,14 @@ function renderPosts(
             spacing: 10,
         },
         views: [
+            // 最小尺寸下，贴吧名放在顶部
+            family === 0 ? renderFixedItem(family, itemWidth) : null,
             ...items
                 .slice(0, itemPerColumn * numColumn - 1)
                 .map(renderItem.bind(null, itemWidth, itemHeight)),
-            renderFixedItem(family, itemWidth),
-        ],
+            // 其他尺寸下，贴吧名放在末尾
+            family !== 0 ? renderFixedItem(family, itemWidth) : null,
+        ].filter((v) => v !== null),
     };
 }
 
