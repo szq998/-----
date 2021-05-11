@@ -87,6 +87,15 @@ function estimateItemPerColumnAndItemHeight(widgetHeight) {
     return [itemPerColumn, itemHeight];
 }
 
+async function getTiebaPostAndSetCache(...args) {
+    const items = await getTiebaPost(...args);
+    $cache.setAsync({
+        key: tiebaName,
+        value: { items, date: new Date() },
+    });
+    return items;
+}
+
 async function fetchEntryWithCache() {
     let items = null;
     let date = null;
@@ -105,12 +114,12 @@ async function fetchEntryWithCache() {
         ) {
             ({ items, date } = cached);
         } else {
-            items = await doWithTimeout(getTiebaPost, 10000, tiebaName);
+            items = await doWithTimeout(
+                getTiebaPostAndSetCache,
+                10000,
+                tiebaName
+            );
             date = new Date();
-            $cache.setAsync({
-                key: tiebaName,
-                value: { items, date },
-            });
         }
     } catch (e) {
         console.error(e);
@@ -121,10 +130,7 @@ async function fetchEntryWithCache() {
             }
         }
     }
-    return {
-        info: items,
-        date,
-    };
+    return { info: items, date };
 }
 
 function renderError(ctx) {
