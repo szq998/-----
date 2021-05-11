@@ -52,6 +52,7 @@ async function getTiebaPostInfo(tiebaName) {
     // const authorRegex = /<span[^>]*title="主题作者:\s(?<author>[^>]+?)"[^>]*>/s;
     const abstractRegex = /<div[^>]*class="[^">]*threadlist_abs_onlyline[^">]*"[^>]*>(?<rawAbstract>[^<]*?)</s;
     const imgRegex = /<img[^>]*data-original="(?<imgUrl>[^"]+?)"/gs;
+    const imgVideoCoverRegex = /<div[^>]*class="[^">]*threadlist_video[^">]*"[^>]*><img src="(?<imgUrl>[^"]+)"/s;
 
     const info = [];
     let execArr;
@@ -74,10 +75,15 @@ async function getTiebaPostInfo(tiebaName) {
             abstract = abstract.length ? abstract : null;
         }
         // 获取贴子封面照片
-        // TODO: 获取视频的封面
         const imgUrls = []; // 可能没有图片
         for (const match of rawPost.matchAll(imgRegex)) {
             imgUrls.push(match.groups.imgUrl);
+        }
+        // 获取视频的封面
+        const { imgUrl: imgVideoCoverUrl } =
+            rawPost.match(imgVideoCoverRegex)?.groups ?? {};
+        if (imgVideoCoverUrl) {
+            imgUrls.push(imgVideoCoverUrl);
         }
 
         info.push({ title, link, abstract, imgUrls /* author,*/ });
