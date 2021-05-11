@@ -242,7 +242,7 @@ function renderItem(itemWidth, itemHeight, item) {
     return {
         type: 'vstack',
         props: {
-            spacing: 0,
+            spacing: 1.5,
             link: OPEN_IN_SAFARI ? link : getLinkOpenedInJSBox(link),
             frame: {
                 maxWidth: Infinity,
@@ -254,7 +254,7 @@ function renderItem(itemWidth, itemHeight, item) {
         views: [
             renderItemTitle(title, titleLineLimit),
             renderItemDetail(abstract, imgUrls),
-        ],
+        ].filter((v) => v !== null),
     };
 }
 
@@ -277,23 +277,51 @@ function renderItemTitle(title, lineLimit) {
 
 function renderItemDetail(abstract, imgUrls) {
     const shownImgUrls = abstract ? imgUrls.slice(0, 1) : imgUrls.slice(0, 3);
-    return {
-        type: 'hstack',
-        props: {
-            spacing: 3,
-            frame: {
-                maxWidth: Infinity,
-                alignment:
-                    shownImgUrls.length == 3
-                        ? $widget.alignment.center
-                        : $widget.alignment.trailing,
+    if (abstract) {
+        return {
+            type: 'hstack',
+            props: {
+                spacing: 3,
+                frame: { maxWidth: Infinity },
             },
-        },
-        views: [
-            abstract ? renderItemDetailAbstract(abstract) : null,
-            ...shownImgUrls.map(renderItemDetailImage),
-        ].filter((v) => v !== null),
-    };
+            views: [
+                renderItemDetailAbstract(abstract),
+                ...shownImgUrls.map(renderItemDetailImage), // only one image
+            ],
+        };
+    } else if (shownImgUrls.length) {
+        const imgLen = shownImgUrls.length;
+        // 当显示2张图片时，内容是靠前(leading)堆放，使用spacer制造缩进
+        const space =
+            imgLen === 2
+                ? {
+                      type: 'spacer',
+                      props: { frame: { width: 0 } }, // 0宽，缩进实际来源于hstack的spacing
+                  }
+                : null;
+        return {
+            type: 'hstack',
+            props: {
+                spacing: imgLen === 3 ? 5 : 10,
+                frame: {
+                    maxWidth: Infinity,
+                    alignment:
+                        // 一张图片时，靠后(trailing)堆放；两张图片时，靠前(leading)堆放；三张图片时，居中
+                        imgLen === 1
+                            ? $widget.alignment.trailing
+                            : imgLen === 2
+                            ? $widget.alignment.leading
+                            : $widget.alignment.center,
+                },
+            },
+            views: [
+                space,
+                ...shownImgUrls.map(renderItemDetailImage), // only one image
+            ].filter((v) => v !== null),
+        };
+    } else {
+        return null;
+    }
 }
 
 function renderItemDetailAbstract(abstract) {
