@@ -16,11 +16,9 @@ const WIDGET_TOP_BOTTOM_MARGIN = 7;
 const BG_CONTENT_OPACITY_LIGHT = 0.1;
 const BG_CONTENT_OPACITY_DARK = 0.15;
 
-const tiebaName = $widget.inputValue;
-
-async function mainWidget() {
+async function mainWidget(tiebaName = $widget.inputValue) {
     $widget.setTimeline({
-        entries: [await fetchEntryWithCache()],
+        entries: [await fetchEntryWithCache(tiebaName)],
         policy: { atEnd: true },
         render: (ctx) => {
             const {
@@ -30,7 +28,7 @@ async function mainWidget() {
             } = ctx;
 
             if (!Array.isArray(items)) {
-                return renderError(ctx);
+                return renderError(tiebaName, ctx);
             }
 
             // estimate number of items pre column
@@ -62,7 +60,8 @@ async function mainWidget() {
                         numColumn,
                         itemWidth,
                         itemHeight,
-                        family
+                        family,
+                        tiebaName
                     ),
                 ],
             };
@@ -87,8 +86,8 @@ function estimateItemPerColumnAndItemHeight(widgetHeight) {
     return [itemPerColumn, itemHeight];
 }
 
-async function getTiebaPostAndSetCache(...args) {
-    const items = await getTiebaPost(...args);
+async function getTiebaPostAndSetCache(tiebaName) {
+    const items = await getTiebaPost(tiebaName);
     $cache.setAsync({
         key: tiebaName,
         value: { items, date: new Date() },
@@ -96,7 +95,7 @@ async function getTiebaPostAndSetCache(...args) {
     return items;
 }
 
-async function fetchEntryWithCache() {
+async function fetchEntryWithCache(tiebaName) {
     let items = null;
     let date = null;
     try {
@@ -133,7 +132,7 @@ async function fetchEntryWithCache() {
     return { info: items, date };
 }
 
-function renderError(ctx) {
+function renderError(tiebaName, ctx) {
     return {
         type: 'zstack',
         props: {
@@ -157,7 +156,7 @@ function renderError(ctx) {
     };
 }
 
-function renderFixedItem(family, itemWidth) {
+function renderFixedItem(family, itemWidth, tiebaName) {
     return {
         type: 'text',
         props: {
@@ -219,7 +218,8 @@ function renderPosts(
     numColumn,
     itemWidth,
     itemHeight,
-    family
+    family,
+    tiebaName
 ) {
     return {
         type: 'hgrid',
@@ -232,12 +232,12 @@ function renderPosts(
         },
         views: [
             // 最小尺寸下，贴吧名放在顶部
-            family === 0 ? renderFixedItem(family, itemWidth) : null,
+            family === 0 ? renderFixedItem(family, itemWidth, tiebaName) : null,
             ...items
                 .slice(0, itemPerColumn * numColumn - 1)
                 .map(renderItem.bind(null, itemWidth, itemHeight)),
             // 其他尺寸下，贴吧名放在末尾
-            family !== 0 ? renderFixedItem(family, itemWidth) : null,
+            family !== 0 ? renderFixedItem(family, itemWidth, tiebaName) : null,
         ].filter((v) => v !== null),
     };
 }

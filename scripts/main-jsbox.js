@@ -1,3 +1,4 @@
+const mainWidget = require('./main-widget');
 const WIDGET_OPTION_PATH = 'widget-options.json';
 
 function loadWidgetOptions() {
@@ -55,6 +56,10 @@ function mainJSBox() {
         saveWidgetOptions(options);
     };
 
+    const onTap = (idx) => {
+        mainWidget(options[idx].value);
+    };
+
     $ui.render({
         props: {
             title: '贴吧小组件',
@@ -62,12 +67,12 @@ function mainJSBox() {
         views: [
             renderPreferences(),
             renderTiebaEditingView(onAdd),
-            renderTiebaList(options, onRemove),
+            renderTiebaList(options, onRemove, onTap),
         ],
     });
 }
 
-function renderTiebaList(options, onRemove) {
+function renderTiebaList(options, onRemove, onTap) {
     return {
         type: 'list',
         props: {
@@ -85,6 +90,9 @@ function renderTiebaList(options, onRemove) {
         layout: (make, view) => {
             make.top.equalTo(view.prev.bottom);
             make.left.bottom.right.equalTo(view.super);
+        },
+        events: {
+            didSelect: (_sender, indexPath) => onTap(indexPath.row),
         },
     };
 }
