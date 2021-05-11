@@ -82,7 +82,7 @@ async function getTiebaPostInfo(tiebaName) {
 
         info.push({ title, link, abstract, imgUrls /* author,*/ });
     }
-    return info;
+    return info.length ? info : null;
 }
 
 module.exports = getTiebaPostInfo;
