@@ -1,8 +1,6 @@
 const getTiebaPost = require('./get-tieba-post');
 const doWithTimeout = require('./do-with-timeout');
 
-const OPEN_IN_SAFARI = !!$prefs.get('open-in-safari');
-
 const TITLE_FONT_SIZE = 13;
 const IMAGE_HEIGHT = 26;
 const ABSTRACT_FONT_SIZE = 10;
@@ -47,7 +45,7 @@ async function mainWidget(tiebaName = $widget.inputValue) {
             return {
                 type: 'zstack',
                 props: {
-                    widgetURL: OPEN_IN_SAFARI
+                    widgetURL: $prefs.get('open-in-safari')
                         ? link
                         : getLinkOpenedInJSBox(link),
                 },
@@ -250,7 +248,9 @@ function renderItem(itemWidth, itemHeight, item) {
         type: 'vstack',
         props: {
             spacing: 1.5,
-            link: OPEN_IN_SAFARI ? link : getLinkOpenedInJSBox(link),
+            link: $prefs.get('open-in-safari')
+                ? link
+                : getLinkOpenedInJSBox(link),
             frame: {
                 maxWidth: Infinity,
                 height: itemHeight,
