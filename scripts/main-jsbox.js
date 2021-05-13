@@ -177,6 +177,30 @@ function renderSlider(title, unit, initial, min, max, onChange, layout) {
                 },
             },
             {
+                type: 'label',
+                props: {
+                    text: `${min}${unit}`,
+                    color: $color('secondaryText'),
+                    font: $font(11),
+                },
+                layout: (make, view) => {
+                    make.top.equalTo(view.prev.bottom).offset(15);
+                    make.leading.inset(10);
+                },
+            },
+            {
+                type: 'label',
+                props: {
+                    text: `${max}${unit}`,
+                    color: $color('secondaryText'),
+                    font: $font(11),
+                },
+                layout: (make, view) => {
+                    make.top.equalTo(view.prev);
+                    make.trailing.inset(10);
+                },
+            },
+            {
                 type: 'slider',
                 props: { value: initial, min, max },
                 events: {
@@ -189,33 +213,9 @@ function renderSlider(title, unit, initial, min, max, onChange, layout) {
                     },
                 },
                 layout: (make, view) => {
-                    make.width.equalTo(250);
-                    make.centerX.equalTo(view.super);
-                    make.top.equalTo(view.prev.bottom).offset(5);
-                },
-            },
-            {
-                type: 'label',
-                props: {
-                    text: `${min}${unit}`,
-                    color: $color('secondaryText'),
-                    font: $font(11),
-                },
-                layout: (make, view) => {
-                    make.trailing.equalTo(view.prev.leading).offset(-5);
                     make.centerY.equalTo(view.prev);
-                },
-            },
-            {
-                type: 'label',
-                props: {
-                    text: `${max}${unit}`,
-                    color: $color('secondaryText'),
-                    font: $font(11),
-                },
-                layout: (make, view) => {
                     make.leading.equalTo(view.prev.prev.trailing).offset(5);
-                    make.centerY.equalTo(view.prev);
+                    make.trailing.equalTo(view.prev.leading).offset(-5);
                 },
             },
         ],
@@ -252,7 +252,8 @@ function renderPreferences() {
                     return newVal;
                 },
                 (make, view) => {
-                    make.size.equalTo($size(300, 60));
+                    make.size.equalTo($size(350, 60));
+                    make.width.lessThanOrEqualTo(view.super);
                     make.top.equalTo(view.prev.bottom);
                     make.centerX.equalTo(view.super);
                 }
