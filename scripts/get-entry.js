@@ -122,9 +122,7 @@ async function getEntry(tiebaName, forceLoad) {
             }
         } else {
             // 获取贴子信息
-            items = await doWithTimeout(getTiebaPost, 10000, tiebaName);
-            // 截取部分，为了降低下载图片的开销
-            items = items.slice(0, 20);
+            items = await doWithTimeout(getTiebaPost, 10000, tiebaName, 20);
             // set date
             date = new Date();
             // prepare to download images

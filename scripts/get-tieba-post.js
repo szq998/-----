@@ -41,7 +41,7 @@ function htmlEntityReplace(s) {
         .replace(/&apos;/g, "'");
 }
 
-async function getTiebaPostInfo(tiebaName) {
+async function getTiebaPostInfo(tiebaName, maxItem) {
     let tiebaHtml = await fetchTiebaHtml(tiebaName);
     // 去除顶置贴
     const topPostClassRegex = /class="[^">]*thread_top[^">]*"/gs;
@@ -63,7 +63,7 @@ async function getTiebaPostInfo(tiebaName) {
     const info = [];
     const errors = [];
     let execArr;
-    while ((execArr = rawPostRegex.exec(tiebaHtml)) !== null) {
+    while ((execArr = rawPostRegex.exec(tiebaHtml)) !== null && maxItem--) {
         const rawPost = execArr[1];
         try {
             // 获取标题和贴子链接
