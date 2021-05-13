@@ -94,7 +94,7 @@ function mainJSBox() {
     };
 
     $ui.render({
-        props: { title: '贴吧小组件' },
+        props: { title: `${$addin.current.name}设置页` },
         views: [
             renderPreferences(),
             renderTiebaEditingView(onAdd),
@@ -178,7 +178,7 @@ function renderSlider(title, unit, initial, min, max, onChange, layout) {
                     text: `${title}(${initial}${unit})`,
                 },
                 layout: (make, view) => {
-                    make.top.centerX.equalTo(view.super);
+                    make.top.centerX.equalTo(view.super).offset(10);
                 },
             },
             {
@@ -234,18 +234,6 @@ function renderPreferences() {
     return {
         type: 'view',
         views: [
-            renderToggle(
-                '点击后跳转到Safari',
-                !!$prefs.get('open-in-safari'),
-                (sender) => {
-                    $prefs.set('open-in-safari', sender.on);
-                },
-                (make, view) => {
-                    make.size.equalTo($size(210, 60));
-                    make.top.equalTo(view.super);
-                    make.centerX.equalTo(view.super);
-                }
-            ),
             renderSlider(
                 '刷新周期',
                 '分钟',
@@ -264,6 +252,18 @@ function renderPreferences() {
                 (make, view) => {
                     make.size.equalTo($size(350, 60));
                     make.width.lessThanOrEqualTo(view.super);
+                    make.top.equalTo(view.super);
+                    make.centerX.equalTo(view.super);
+                }
+            ),
+            renderToggle(
+                '点击后跳转到Safari',
+                !!$prefs.get('open-in-safari'),
+                (sender) => {
+                    $prefs.set('open-in-safari', sender.on);
+                },
+                (make, view) => {
+                    make.size.equalTo($size(210, 60));
                     make.top.equalTo(view.prev.bottom);
                     make.centerX.equalTo(view.super);
                 }
