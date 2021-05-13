@@ -105,7 +105,6 @@ async function getTiebaPostInfo(tiebaName) {
                     rawPost,
                 });
             }
-            continue;
         }
     }
     if (DEBUG && errors.length) {

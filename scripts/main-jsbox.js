@@ -89,9 +89,7 @@ function mainJSBox() {
     };
 
     $ui.render({
-        props: {
-            title: '贴吧小组件',
-        },
+        props: { title: '贴吧小组件' },
         views: [
             renderPreferences(),
             renderTiebaEditingView(onAdd),
@@ -199,9 +197,6 @@ function renderPreferences() {
 function renderTiebaEditingView(onAdd) {
     return {
         type: 'view',
-        props: {
-            id: 'eddd',
-        },
         layout: (make, view) => {
             make.height.equalTo(60);
             make.width.equalTo(view.super);
@@ -218,9 +213,7 @@ function renderTiebaEditingView(onAdd) {
 function renderTiebaEditingInput(onAdd) {
     return {
         type: 'input',
-        props: {
-            placeholder: '贴吧名',
-        },
+        props: { placeholder: '贴吧名' },
         layout: (make, view) => {
             make.size.equalTo($size(130, 40));
             make.centerY.equalTo(view.super);
@@ -240,9 +233,7 @@ function renderTiebaEditingInput(onAdd) {
 function renderTiebaEditingAddButton(onAdd) {
     return {
         type: 'button',
-        props: {
-            title: '添加',
-        },
+        props: { title: '添加' },
         layout: (make, view) => {
             make.left.equalTo(view.prev.right).offset(20);
             make.centerY.equalTo(view.super);
