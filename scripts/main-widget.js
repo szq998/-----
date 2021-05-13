@@ -14,9 +14,11 @@ const WIDGET_TOP_BOTTOM_MARGIN = 7;
 const BG_CONTENT_OPACITY_LIGHT = 0.1;
 const BG_CONTENT_OPACITY_DARK = 0.15;
 
+const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
+
 async function mainWidget(tiebaName = $widget.inputValue, forceLoad = false) {
     $widget.setTimeline({
-        entries: [await fetchEntryWithCache(tiebaName, forceLoad)],
+        entries: [await getEntry(tiebaName, forceLoad)],
         policy: { atEnd: true },
         render: (ctx) => {
             const {
@@ -84,52 +86,159 @@ function estimateItemPerColumnAndItemHeight(widgetHeight) {
     return [itemPerColumn, itemHeight];
 }
 
-async function getTiebaPostAndSetCache(tiebaName) {
-    const items = await getTiebaPost(tiebaName);
-    $cache.setAsync({
-        key: tiebaName,
-        value: { items, date: new Date() },
-    });
-    return items;
+async function downloadImage(dst, item) {
+    if (item.imgDownloaded || item.imgUrls.length === 0) {
+        // 图片已经下载完毕或者本就没有图片
+        return true;
+    } else {
+        // 有摘要只显示一张图片，无摘要最多显示三张
+        const shownImgUrls = item.abstract
+            ? item.imgUrls.slice(0, 1)
+            : item.imgUrls.slice(0, 3);
+        // 忽略已下载的照片（不保持照片顺序）
+        item.imgPaths.forEach(() => shownImgUrls.pop());
+        try {
+            await Promise.all(
+                shownImgUrls.map(async (url) => {
+                    const {
+                        response: { statusCode, error },
+                        rawData: data,
+                    } = await $http.get({ url });
+                    if (error) {
+                        throw error;
+                    }
+                    if (statusCode !== 200) {
+                        throw new Error(
+                            'Image download failed with status code ' +
+                                statusCode
+                        );
+                    }
+                    // write to disk
+                    const name = url.split('/').slice(-1)[0];
+                    const path = `${dst}/${name}`;
+                    const success = $file.write({ path, data });
+                    if (success) {
+                        item.imgPaths.push(path);
+                    }
+                })
+            );
+            item.imgDownloaded = true;
+            return true;
+        } catch (err) {
+            console.error(err);
+            return false;
+        }
+    }
 }
 
-async function fetchEntryWithCache(tiebaName, forceLoad) {
+async function tryDownloadAllImageWithTimeout(
+    dst,
+    items,
+    maxTime,
+    partialDownloaded
+) {
+    if (!partialDownloaded) {
+        // check the existence of dst folder
+        if (
+            !$file.exists(IMAGE_DOWNLOAD_DIR) &&
+            !$file.mkdir(IMAGE_DOWNLOAD_DIR)
+        ) {
+            throw new Error('Failed to create folder for saving image');
+        }
+        // delete old images
+        $file.delete(dst);
+        // create dst folder
+        if (!$file.mkdir(dst)) {
+            throw new Error('Failed to create folder for saving image');
+        }
+    }
+    try {
+        const downloadResults = await doWithTimeout(
+            () => Promise.allSettled(items.map(downloadImage.bind(null, dst))),
+            maxTime
+        );
+        return downloadResults.every((v) => v === true);
+    } catch (e) {
+        console.error(e);
+        return false;
+    }
+}
+
+function isCacheValid(cache, nowDate) {
+    return (
+        cache &&
+        cache.items &&
+        cache.date &&
+        nowDate - cache.date < ($prefs.get('refresh-circle') ?? 30) * 60000
+    );
+}
+
+async function getEntry(tiebaName, forceLoad) {
+    if (!tiebaName) {
+        return {
+            info: null,
+            date: null,
+        };
+    }
+
     let items = null;
     let date = null;
+    const cached = await $cache.getAsync(tiebaName);
+    const dst = `${IMAGE_DOWNLOAD_DIR}/${tiebaName}`;
     try {
-        // if tiebaName set
-        if (!tiebaName) {
-            throw new Error('No Tieba name provided');
-        }
-        const cached = await $cache.getAsync(tiebaName);
-        if (
-            !forceLoad &&
-            cached &&
-            cached.items &&
-            cached.date &&
-            new Date() - cached.date <
-                ($prefs.get('refresh-circle') ?? 30) * 60000
-        ) {
-            // under the same refresh circle
+        if (!forceLoad && isCacheValid(cached, new Date())) {
+            // use cache
             ({ items, date } = cached);
+            if (!cached.imgAllDownloaded) {
+                // images are not completely downloaded
+                const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
+                    dst,
+                    items,
+                    10000,
+                    true
+                );
+                // set cache
+                $cache.setAsync({
+                    key: tiebaName,
+                    value: { items, date, imgAllDownloaded },
+                });
+            }
         } else {
-            // new refresh
-            items = await doWithTimeout(
-                getTiebaPostAndSetCache,
-                10000,
-                tiebaName
-            );
+            // 获取贴子信息
+            items = await doWithTimeout(getTiebaPost, 10000, tiebaName);
+            // 截取部分，为了降低下载图片的开销
+            items = items.slice(0, 20);
+            // set date
             date = new Date();
+            // prepare to download images
+            items.forEach((v) => {
+                v.imgDownloaded = false;
+                v.imgPaths = [];
+            });
+            $cache.setAsync({
+                key: tiebaName,
+                value: { items, date, imgAllDownloaded: false },
+            });
+            // 下载图片
+            const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
+                dst,
+                items,
+                10000,
+                false
+            );
+            // set cache
+            $cache.setAsync({
+                key: tiebaName,
+                value: { items, date, imgAllDownloaded },
+            });
         }
     } catch (e) {
         console.error(e);
-        if (tiebaName) {
-            const cached = await $cache.getAsync(tiebaName);
-            if (cached && cached.items && cached.date) {
-                ({ items, date } = cached);
-            }
+        if (cached && cached.items && cached.date) {
+            ({ items, date } = cached);
         }
     }
+
     return { info: items, date };
 }
 
@@ -244,9 +353,9 @@ function renderPosts(
 }
 
 function renderItem(itemWidth, itemHeight, item) {
-    const { title, link, abstract, imgUrls } = item;
+    const { title, link, abstract, imgPaths } = item;
     // 没有摘要和图片时，标题最多可以有两行
-    const titleLineLimit = abstract || imgUrls.length ? 1 : 2;
+    const titleLineLimit = abstract || imgPaths.length ? 1 : 2;
     return {
         type: 'vstack',
         props: {
@@ -263,7 +372,7 @@ function renderItem(itemWidth, itemHeight, item) {
         },
         views: [
             renderItemTitle(title, titleLineLimit),
-            renderItemDetail(abstract, imgUrls),
+            renderItemDetail(abstract, imgPaths),
         ].filter((v) => v !== null),
     };
 }
@@ -285,8 +394,7 @@ function renderItemTitle(title, lineLimit) {
     };
 }
 
-function renderItemDetail(abstract, imgUrls) {
-    const shownImgUrls = abstract ? imgUrls.slice(0, 1) : imgUrls.slice(0, 3);
+function renderItemDetail(abstract, imgPaths) {
     if (abstract) {
         return {
             type: 'hstack',
@@ -296,11 +404,12 @@ function renderItemDetail(abstract, imgUrls) {
             },
             views: [
                 renderItemDetailAbstract(abstract),
-                ...shownImgUrls.map(renderItemDetailImage), // only one image
+                ...imgPaths.map(renderItemDetailImage),
+                // only one image
             ],
         };
-    } else if (shownImgUrls.length) {
-        const imgLen = shownImgUrls.length;
+    } else if (imgPaths.length) {
+        const imgLen = imgPaths.length;
         // 当显示2张图片时，内容是靠前(leading)堆放，使用spacer制造缩进
         const space =
             imgLen === 2
@@ -324,10 +433,9 @@ function renderItemDetail(abstract, imgUrls) {
                             : $widget.alignment.center,
                 },
             },
-            views: [
-                space,
-                ...shownImgUrls.map(renderItemDetailImage), // only one image
-            ].filter((v) => v !== null),
+            views: [space, ...imgPaths.map(renderItemDetailImage)].filter(
+                (v) => v !== null
+            ),
         };
     } else {
         return null;
@@ -352,7 +460,7 @@ function renderItemDetailAbstract(abstract) {
     };
 }
 
-function renderItemDetailImage(imgUrl) {
+function renderItemDetailImage(imgPath) {
     return {
         type: 'image',
         props: {
@@ -363,7 +471,7 @@ function renderItemDetailImage(imgUrl) {
                 size: 64, // big size because symbol will be scale
                 weight: 'ultraLight',
             },
-            uri: imgUrl,
+            path: imgPath,
             resizable: true,
             scaledToFill: true,
             frame: {
