@@ -354,6 +354,12 @@ function renderItemDetailImage(imgUrl) {
         type: 'image',
         props: {
             cornerRadius: 3,
+            // symbol will be shown only when image failed to load
+            symbol: {
+                glyph: 'exclamationmark.icloud',
+                size: 64, // big size because symbol will be scale
+                weight: 'ultraLight',
+            },
             uri: imgUrl,
             resizable: true,
             scaledToFill: true,
