@@ -1,5 +1,6 @@
 const mainWidget = require('./main-widget');
 const WIDGET_OPTION_PATH = 'widget-options.json';
+const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
 
 function loadWidgetOptions() {
     const rawOptions = $file.read(WIDGET_OPTION_PATH).string;
@@ -51,9 +52,13 @@ function mainJSBox() {
     };
 
     const onRemove = (deletingIdx) => {
+        const tiebaName = options[deletingIdx].value;
         options = options.filter((_, i) => i !== deletingIdx);
         $('list').delete(deletingIdx);
         saveWidgetOptions(options);
+        // clear caches and images
+        $cache.removeAsync({ key: tiebaName });
+        $file.delete(`${IMAGE_DOWNLOAD_DIR}/${tiebaName}`);
     };
 
     const onTap = (idx) => {
