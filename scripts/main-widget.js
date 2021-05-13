@@ -101,17 +101,19 @@ async function fetchEntryWithCache(tiebaName, forceLoad) {
         if (!tiebaName) {
             throw new Error('No Tieba name provided');
         }
-        // if latest update happened in a minute
         const cached = await $cache.getAsync(tiebaName);
         if (
             !forceLoad &&
             cached &&
             cached.items &&
             cached.date &&
-            new Date() - cached.date < 60000
+            new Date() - cached.date <
+                ($prefs.get('refresh-circle') ?? 30) * 60000
         ) {
+            // under the same refresh circle
             ({ items, date } = cached);
         } else {
+            // new refresh
             items = await doWithTimeout(
                 getTiebaPostAndSetCache,
                 10000,

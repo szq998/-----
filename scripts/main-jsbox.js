@@ -139,9 +139,7 @@ function renderToggle(title, initialStatus, onChange, layout) {
         views: [
             {
                 type: 'label',
-                props: {
-                    text: title,
-                },
+                props: { text: title },
                 layout: (make, view) => {
                     make.leading.equalTo(view.super);
                     make.centerY.equalTo(view.super);
@@ -149,21 +147,79 @@ function renderToggle(title, initialStatus, onChange, layout) {
             },
             {
                 type: 'switch',
-                props: {
-                    on: initialStatus,
-                },
-                events: {
-                    changed: onChange,
-                },
+                props: { on: initialStatus },
+                events: { changed: onChange },
                 layout: (make, view) => {
                     make.leading.equalTo(view.prev.trailing).offset(20);
                     make.centerY.equalTo(view.super);
                 },
             },
         ],
-        events: {
-            changed: onChange,
-        },
+        events: { changed: onChange },
+        layout,
+    };
+}
+
+function renderSlider(title, unit, initial, min, max, onChange, layout) {
+    const titleLabelID = `slider-title-label-of-${title}`;
+    return {
+        type: 'view',
+        views: [
+            {
+                type: 'label',
+                props: {
+                    id: titleLabelID,
+                    font: $font(13),
+                    text: `${title}(${initial}${unit})`,
+                },
+                layout: (make, view) => {
+                    make.top.centerX.equalTo(view.super);
+                },
+            },
+            {
+                type: 'slider',
+                props: { value: initial, min, max },
+                events: {
+                    changed: (sender) => {
+                        const newVal = onChange(sender);
+                        if (typeof newVal !== 'number') {
+                            return;
+                        }
+                        $(titleLabelID).text = `${title}(${newVal}${unit})`;
+                    },
+                },
+                layout: (make, view) => {
+                    make.width.equalTo(250);
+                    make.centerX.equalTo(view.super);
+                    make.top.equalTo(view.prev.bottom).offset(5);
+                },
+            },
+            {
+                type: 'label',
+                props: {
+                    text: `${min}${unit}`,
+                    color: $color('secondaryText'),
+                    font: $font(11),
+                },
+                layout: (make, view) => {
+                    make.trailing.equalTo(view.prev.leading).offset(-5);
+                    make.centerY.equalTo(view.prev);
+                },
+            },
+            {
+                type: 'label',
+                props: {
+                    text: `${max}${unit}`,
+                    color: $color('secondaryText'),
+                    font: $font(11),
+                },
+                layout: (make, view) => {
+                    make.leading.equalTo(view.prev.prev.trailing).offset(5);
+                    make.centerY.equalTo(view.prev);
+                },
+            },
+        ],
+        events: { changed: onChange },
         layout,
     };
 }
@@ -184,9 +240,26 @@ function renderPreferences() {
                     make.centerX.equalTo(view.super);
                 }
             ),
+            renderSlider(
+                '刷新周期',
+                '分钟',
+                $prefs.get('refresh-circle') ?? 30,
+                1,
+                120,
+                (sender) => {
+                    const newVal = Math.round(sender.value / 5) * 5 || 1;
+                    $prefs.set('refresh-circle', newVal);
+                    return newVal;
+                },
+                (make, view) => {
+                    make.size.equalTo($size(300, 60));
+                    make.top.equalTo(view.prev.bottom);
+                    make.centerX.equalTo(view.super);
+                }
+            ),
         ],
         layout: (make, view) => {
-            make.height.equalTo(60);
+            make.height.equalTo(120);
             make.width.equalTo(view.super);
             make.top.equalTo(view.super);
             make.centerX.equalTo(view.super);
