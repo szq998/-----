@@ -14,9 +14,9 @@ const WIDGET_TOP_BOTTOM_MARGIN = 7;
 const BG_CONTENT_OPACITY_LIGHT = 0.1;
 const BG_CONTENT_OPACITY_DARK = 0.15;
 
-async function mainWidget(tiebaName = $widget.inputValue) {
+async function mainWidget(tiebaName = $widget.inputValue, forceLoad = false) {
     $widget.setTimeline({
-        entries: [await fetchEntryWithCache(tiebaName)],
+        entries: [await fetchEntryWithCache(tiebaName, forceLoad)],
         policy: { atEnd: true },
         render: (ctx) => {
             const {
@@ -93,7 +93,7 @@ async function getTiebaPostAndSetCache(tiebaName) {
     return items;
 }
 
-async function fetchEntryWithCache(tiebaName) {
+async function fetchEntryWithCache(tiebaName, forceLoad) {
     let items = null;
     let date = null;
     try {
@@ -104,6 +104,7 @@ async function fetchEntryWithCache(tiebaName) {
         // if latest update happened in a minute
         const cached = await $cache.getAsync(tiebaName);
         if (
+            !forceLoad &&
             cached &&
             cached.items &&
             cached.date &&

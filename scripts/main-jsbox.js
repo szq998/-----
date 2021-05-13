@@ -57,7 +57,7 @@ function mainJSBox() {
     };
 
     const onTap = (idx) => {
-        mainWidget(options[idx].value);
+        mainWidget(options[idx].value, true);
     };
 
     $ui.render({
