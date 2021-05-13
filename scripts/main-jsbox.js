@@ -210,6 +210,7 @@ function renderSlider(title, unit, initial, min, max, onChange, layout) {
                             return;
                         }
                         $(titleLabelID).text = `${title}(${newVal}${unit})`;
+                        sender.value = newVal;
                     },
                 },
                 layout: (make, view) => {
@@ -247,8 +248,12 @@ function renderPreferences() {
                 1,
                 120,
                 (sender) => {
+                    const oldVal = $prefs.get('refresh-circle') ?? 30;
                     const newVal = Math.round(sender.value / 5) * 5 || 1;
-                    $prefs.set('refresh-circle', newVal);
+                    if (oldVal != newVal) {
+                        $prefs.set('refresh-circle', newVal);
+                        $device.taptic(0);
+                    }
                     return newVal;
                 },
                 (make, view) => {
