@@ -60,6 +60,34 @@ function mainJSBox() {
         mainWidget(options[idx].value, true);
     };
 
+    const onReorder = (from, to) => {
+        if (
+            from === to ||
+            from < 0 ||
+            from >= options.length ||
+            to < 0 ||
+            to >= options.length
+        ) {
+            return;
+        }
+        if (from < to) {
+            options = [
+                ...options.slice(0, from),
+                ...options.slice(from + 1, to + 1),
+                options[from],
+                ...options.slice(to + 1),
+            ];
+        } else {
+            options = [
+                ...options.slice(0, to),
+                options[from],
+                ...options.slice(to, from),
+                ...options.slice(from + 1),
+            ];
+        }
+        saveWidgetOptions(options);
+    };
+
     $ui.render({
         props: {
             title: '贴吧小组件',
@@ -67,16 +95,18 @@ function mainJSBox() {
         views: [
             renderPreferences(),
             renderTiebaEditingView(onAdd),
-            renderTiebaList(options, onRemove, onTap),
+            renderTiebaList(options, onRemove, onTap, onReorder),
         ],
     });
 }
 
-function renderTiebaList(options, onRemove, onTap) {
+function renderTiebaList(options, onRemove, onTap, onReorder) {
+    let reorderFrom, reorderTo;
     return {
         type: 'list',
         props: {
             data: options.map((v) => v.name),
+            reorder: true,
             actions: [
                 {
                     title: '删除',
@@ -93,6 +123,14 @@ function renderTiebaList(options, onRemove, onTap) {
         },
         events: {
             didSelect: (_sender, indexPath) => onTap(indexPath.row),
+            reorderBegan: (indexPath) => {
+                reorderFrom = indexPath.row;
+                reorderTo = indexPath.row;
+            },
+            reorderMoved: (_fromIndexPath, toIndexPath) => {
+                reorderTo = toIndexPath.row;
+            },
+            reorderFinished: () => onReorder(reorderFrom, reorderTo),
         },
     };
 }
