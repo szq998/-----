@@ -7,7 +7,23 @@ const {
     IMAGE_DOWNLOAD_DIR,
     MAX_NUMBER_OF_POST,
     DEFAULT_REFRESH_CIRCLE,
+    MAX_IMAGE_SIZE,
 } = require('./constant');
+
+async function selectImageBySize(imgUrls, maxSize, maxNumImg) {
+    const selected = [];
+    for (let i = 0; i < imgUrls.length && selected.length < maxNumImg; ++i) {
+        const url = imgUrls[i];
+        const {
+            response: { expectedContentLength: len },
+        } = await $http.request({ method: 'HEAD', url });
+
+        if (typeof len === 'number' && len <= maxSize) {
+            selected.push(url);
+        }
+    }
+    return selected;
+}
 
 async function downloadImage(dst, item) {
     if (item.imgDownloaded || item.imgUrls.length === 0) {
@@ -15,19 +31,42 @@ async function downloadImage(dst, item) {
         return true;
     } else {
         // 有摘要只显示一张图片，无摘要最多显示三张
-        const shownImgUrls = item.abstract
-            ? item.imgUrls.slice(0, 1)
-            : item.imgUrls.slice(0, 3);
-        if (item.imgPaths) {
-            // 忽略已下载的照片（不保持照片顺序）
-            item.imgPaths.forEach(() => shownImgUrls.pop());
-        } else {
+        const maxNumImg = item.abstract ? 1 : 3;
+        // 只获取较小尺寸的图片，防止超出小组件的资源限制，导致卡死
+        let shownImgUrls = await selectImageBySize(
+            item.imgUrls,
+            MAX_IMAGE_SIZE,
+            maxNumImg
+        );
+        if (!shownImgUrls.length) {
+            // 没有符合的图片
+            item.imgDownloaded = true;
+            return true;
+        }
+        // 创建imgPaths数组
+        if (!item.imgPaths) {
             item.imgDownloaded = false;
             item.imgPaths = [];
         }
+        // 去除已经下载的图片
+        shownImgUrls = shownImgUrls.filter((url) => {
+            const name = url.split('/').slice(-1)[0];
+            const path = `${dst}/${name}`;
+            if (item.imgPaths.indexOf(path) !== -1) {
+                // 图片已经下载且加入到了imgPaths中
+                return false;
+            }
+            if ($file.exists(path)) {
+                // 图片之前下载了，但没有在imgPaths中
+                item.imgPaths.push(path);
+                return false;
+            }
+            return true;
+        });
         try {
             await Promise.all(
                 shownImgUrls.map(async (url) => {
+                    // download
                     const {
                         response: { statusCode, error },
                         rawData: data,
@@ -74,12 +113,11 @@ async function tryDownloadAllImageWithTimeout(
             ) {
                 throw new Error('Failed to create folder for saving image');
             }
-            // delete old images
-            $file.delete(dst);
             // create dst folder
-            if (!$file.mkdir(dst)) {
+            if (!$file.exists(dst) && !$file.mkdir(dst)) {
                 throw new Error('Failed to create folder for saving image');
             }
+            // TODO: clear old images
         }
         const downloadResults = await doWithTimeout(
             () => Promise.allSettled(items.map(downloadImage.bind(null, dst))),

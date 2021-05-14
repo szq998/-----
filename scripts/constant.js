@@ -19,6 +19,8 @@ const POST_INFO_TIMEOUT = 10000;
 const IMAGE_TIMEOUT = 10000;
 // 图片下载路径
 const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
+// 最大允许的图片尺寸
+const MAX_IMAGE_SIZE = 500 * 1000; // 500KB
 // 默认设置
 const DEFAULT_REFRESH_CIRCLE = 30;
 // 小组件输入参数设置
@@ -36,6 +38,7 @@ module.exports = {
     ITEM_CONTENT_HEIGHT,
     LOG_DIR,
     MAX_NUMBER_OF_POST,
+    MAX_IMAGE_SIZE,
     MIN_ITEM_HEIGHT,
     MIN_ITEM_MARGIN,
     POST_INFO_TIMEOUT,
