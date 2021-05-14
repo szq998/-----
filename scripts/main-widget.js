@@ -193,9 +193,9 @@ function renderPosts(
 }
 
 function renderItem(itemWidth, itemHeight, item) {
-    const { title, link, abstract, imgPaths } = item;
+    const { title, link, abstract, imgPaths } = item; // imgPaths可能不存在
     // 没有摘要和图片时，标题最多可以有两行
-    const titleLineLimit = abstract || imgPaths.length ? 1 : 2;
+    const titleLineLimit = abstract || imgPaths?.length ? 1 : 2;
     return {
         type: 'vstack',
         props: {
@@ -234,7 +234,7 @@ function renderItemTitle(title, lineLimit) {
     };
 }
 
-function renderItemDetail(abstract, imgPaths) {
+function renderItemDetail(abstract, imgPaths = null) {
     if (abstract) {
         return {
             type: 'hstack',
@@ -244,11 +244,11 @@ function renderItemDetail(abstract, imgPaths) {
             },
             views: [
                 renderItemDetailAbstract(abstract),
-                ...imgPaths.map(renderItemDetailImage),
+                imgPaths ? renderItemDetailImage(imgPaths[0]) : null,
                 // only one image
-            ],
+            ].filter((v) => v !== null),
         };
-    } else if (imgPaths.length) {
+    } else if (imgPaths?.length) {
         const imgLen = imgPaths.length;
         // 当显示2张图片时，内容是靠前(leading)堆放，使用spacer制造缩进
         const space =
@@ -273,9 +273,10 @@ function renderItemDetail(abstract, imgPaths) {
                             : $widget.alignment.center,
                 },
             },
-            views: [space, ...imgPaths.map(renderItemDetailImage)].filter(
-                (v) => v !== null
-            ),
+            views: [
+                space,
+                ...imgPaths.slice(0, 3).map(renderItemDetailImage),
+            ].filter((v) => v !== null),
         };
     } else {
         return null;

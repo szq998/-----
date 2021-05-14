@@ -12,8 +12,13 @@ async function downloadImage(dst, item) {
         const shownImgUrls = item.abstract
             ? item.imgUrls.slice(0, 1)
             : item.imgUrls.slice(0, 3);
-        // 忽略已下载的照片（不保持照片顺序）
-        item.imgPaths.forEach(() => shownImgUrls.pop());
+        if (item.imgPaths) {
+            // 忽略已下载的照片（不保持照片顺序）
+            item.imgPaths.forEach(() => shownImgUrls.pop());
+        } else {
+            item.imgDownloaded = false;
+            item.imgPaths = [];
+        }
         try {
             await Promise.all(
                 shownImgUrls.map(async (url) => {
@@ -125,15 +130,6 @@ async function getEntry(tiebaName, forceLoad) {
             items = await doWithTimeout(getTiebaPost, 10000, tiebaName, 20);
             // set date
             date = new Date();
-            // prepare to download images
-            items.forEach((v) => {
-                v.imgDownloaded = false;
-                v.imgPaths = [];
-            });
-            $cache.setAsync({
-                key: tiebaName,
-                value: { items, date, imgAllDownloaded: false },
-            });
             // 下载图片
             const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
                 dst,
@@ -141,7 +137,7 @@ async function getEntry(tiebaName, forceLoad) {
                 10000,
                 false
             );
-            // set cache
+            // cache after image downloading
             $cache.setAsync({
                 key: tiebaName,
                 value: { items, date, imgAllDownloaded },
