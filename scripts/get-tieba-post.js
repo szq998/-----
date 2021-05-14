@@ -1,4 +1,4 @@
-const DEBUG = true;
+const { DEBUG, LOG_DIR } = require('./constant');
 
 async function fetchTiebaHtml(tiebaName) {
     const tiebaURL = `https://tieba.baidu.com/f?kw=${encodeURIComponent(
@@ -110,7 +110,7 @@ async function getTiebaPostInfo(tiebaName, maxItem) {
     if (DEBUG && errors.length) {
         $file.write({
             data: $data({ string: JSON.stringify(errors) }),
-            path: `assets/log/${tiebaName}-${new Date()}.json`,
+            path: `${LOG_DIR}/get-tieba-post-${tiebaName}-${new Date()}.json`,
         });
     }
     return info.length ? info : null;

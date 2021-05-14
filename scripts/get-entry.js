@@ -1,7 +1,13 @@
 const getTiebaPost = require('./get-tieba-post');
-const doWithTimeout = require('./do-with-timeout');
+const doWithTimeout = require('./util/do-with-timeout');
 
-const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
+const {
+    POST_INFO_TIMEOUT,
+    IMAGE_TIMEOUT,
+    IMAGE_DOWNLOAD_DIR,
+    MAX_NUMBER_OF_POST,
+    DEFAULT_REFRESH_CIRCLE,
+} = require('./constant');
 
 async function downloadImage(dst, item) {
     if (item.imgDownloaded || item.imgUrls.length === 0) {
@@ -91,7 +97,8 @@ function isCacheValid(cache, nowDate) {
         cache &&
         cache.items &&
         cache.date &&
-        nowDate - cache.date < ($prefs.get('refresh-circle') ?? 30) * 60000
+        nowDate - cache.date <
+            ($prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE) * 60000
     );
 }
 
@@ -116,7 +123,7 @@ async function getEntry(tiebaName, forceLoad) {
                 const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
                     dst,
                     items,
-                    10000,
+                    IMAGE_TIMEOUT,
                     true
                 );
                 // set cache
@@ -127,14 +134,19 @@ async function getEntry(tiebaName, forceLoad) {
             }
         } else {
             // 获取贴子信息
-            items = await doWithTimeout(getTiebaPost, 10000, tiebaName, 20);
+            items = await doWithTimeout(
+                getTiebaPost,
+                POST_INFO_TIMEOUT,
+                tiebaName,
+                MAX_NUMBER_OF_POST
+            );
             // set date
             date = new Date();
             // 下载图片
             const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
                 dst,
                 items,
-                10000,
+                IMAGE_TIMEOUT,
                 false
             );
             // cache after image downloading

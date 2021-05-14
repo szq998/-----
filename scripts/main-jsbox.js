@@ -1,6 +1,10 @@
 const mainWidget = require('./main-widget');
-const WIDGET_OPTION_PATH = 'widget-options.json';
-const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
+
+const {
+    WIDGET_OPTION_PATH,
+    IMAGE_DOWNLOAD_DIR,
+    DEFAULT_REFRESH_CIRCLE,
+} = require('./constant');
 
 function loadWidgetOptions() {
     const rawOptions = $file.read(WIDGET_OPTION_PATH).string;
@@ -237,11 +241,11 @@ function renderPreferences() {
             renderSlider(
                 '刷新周期',
                 '分钟',
-                $prefs.get('refresh-circle') ?? 30,
+                $prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE,
                 1,
                 120,
                 (sender) => {
-                    const oldVal = $prefs.get('refresh-circle') ?? 30;
+                    const oldVal = $prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE;
                     const newVal = Math.round(sender.value / 5) * 5 || 1;
                     if (oldVal != newVal) {
                         $prefs.set('refresh-circle', newVal);
