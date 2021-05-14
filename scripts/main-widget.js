@@ -7,12 +7,25 @@ const {
     ITEM_CONTENT_HEIGHT,
     MIN_ITEM_HEIGHT,
     WIDGET_TOP_BOTTOM_MARGIN,
+    DEFAULT_REFRESH_CIRCLE,
 } = require('./constant');
 
 async function mainWidget(tiebaName = $widget.inputValue, forceLoad = false) {
+    const entry = await getEntry(tiebaName, forceLoad);
+    const policy = {};
+    const lastUpdatingDate = entry.date;
+    if (lastUpdatingDate) {
+        policy.afterDate = new Date(
+            lastUpdatingDate.valueOf() +
+                ($prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE) * 60000
+        );
+    } else {
+        policy.atEnd = true;
+    }
+
     $widget.setTimeline({
-        entries: [await getEntry(tiebaName, forceLoad)],
-        policy: { atEnd: true },
+        policy,
+        entries: [entry],
         render: (ctx) => {
             const {
                 entry: { info: items },
