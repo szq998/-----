@@ -12,20 +12,20 @@ const MIN_ITEM_HEIGHT = ITEM_CONTENT_HEIGHT + MIN_ITEM_MARGIN * 2;
 const BG_CONTENT_OPACITY_LIGHT = 0.1;
 const BG_CONTENT_OPACITY_DARK = 0.15;
 const WIDGET_TOP_BOTTOM_MARGIN = 7;
-// 获取数据量的限制
+// 获取贴子数量的限制
 const MAX_NUMBER_OF_POST = 20;
 // 超时控制
 const POST_INFO_TIMEOUT = 10000;
 const IMAGE_TIMEOUT = 10000;
 // 图片下载路径
 const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
-// 图片清理间隔
+// 图片清理间隔时间
 const IMAGE_CLEAR_INTERVAL = 7 * 24 * 60 * 60000; // 7 day
-// 最大允许的图片尺寸
+// 最大可加载的图片尺寸
 const MAX_IMAGE_SIZE = 500 * 1000; // 500KB
-// 默认设置
+// 默认刷新周期设置
 const DEFAULT_REFRESH_CIRCLE = 30;
-// 小组件输入参数设置
+// 小组件输入参数配置文件
 const WIDGET_OPTION_PATH = 'widget-options.json';
 
 module.exports = {
