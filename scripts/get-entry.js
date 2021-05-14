@@ -92,6 +92,21 @@ async function tryDownloadAllImageWithTimeout(
     }
 }
 
+async function tryGetTiebaPostWithTimeout(tiebaName, maxTime, maxNumPost) {
+    try {
+        return await doWithTimeout(
+            getTiebaPost,
+            maxTime,
+            tiebaName,
+            maxNumPost
+        );
+    } catch (e) {
+        // 主要为超时
+        console.error(e);
+        return null;
+    }
+}
+
 function isCacheValid(cache, nowDate) {
     return (
         cache &&
@@ -114,32 +129,32 @@ async function getEntry(tiebaName, forceLoad) {
     let date = null;
     const cached = await $cache.getAsync(tiebaName);
     const dst = `${IMAGE_DOWNLOAD_DIR}/${tiebaName}`;
-    try {
-        if (!forceLoad && isCacheValid(cached, new Date())) {
-            // use cache
-            ({ items, date } = cached);
-            if (!cached.imgAllDownloaded) {
-                // images are not completely downloaded
-                const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
-                    dst,
-                    items,
-                    IMAGE_TIMEOUT,
-                    true
-                );
-                // set cache
-                $cache.setAsync({
-                    key: tiebaName,
-                    value: { items, date, imgAllDownloaded },
-                });
-            }
-        } else {
-            // 获取贴子信息
-            items = await doWithTimeout(
-                getTiebaPost,
-                POST_INFO_TIMEOUT,
-                tiebaName,
-                MAX_NUMBER_OF_POST
+    if (!forceLoad && isCacheValid(cached, new Date())) {
+        // use cache
+        ({ items, date } = cached);
+        if (!cached.imgAllDownloaded) {
+            // images are not completely downloaded
+            const imgAllDownloaded = await tryDownloadAllImageWithTimeout(
+                dst,
+                items,
+                IMAGE_TIMEOUT,
+                true
             );
+            // set cache
+            $cache.setAsync({
+                key: tiebaName,
+                value: { items, date, imgAllDownloaded },
+            });
+        }
+    } else {
+        // no valid cache
+        items = await tryGetTiebaPostWithTimeout(
+            tiebaName,
+            POST_INFO_TIMEOUT,
+            MAX_NUMBER_OF_POST
+        );
+        if (items) {
+            // fetch post successfully
             // set date
             date = new Date();
             // 下载图片
@@ -154,14 +169,13 @@ async function getEntry(tiebaName, forceLoad) {
                 key: tiebaName,
                 value: { items, date, imgAllDownloaded },
             });
-        }
-    } catch (e) {
-        console.error(e);
-        if (cached && cached.items && cached.date) {
-            ({ items, date } = cached);
+        } else {
+            // use cache if provided, even expired
+            if (cached && cached.items && cached.date) {
+                ({ items, date } = cached);
+            }
         }
     }
-
     return { info: items, date };
 }
 
