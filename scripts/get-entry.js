@@ -1,5 +1,6 @@
 const getTiebaPost = require('./get-tieba-post');
 const doWithTimeout = require('./util/do-with-timeout');
+const getFileMTime = require('./util/get-file-mtime');
 
 const {
     POST_INFO_TIMEOUT,
@@ -8,6 +9,7 @@ const {
     MAX_NUMBER_OF_POST,
     DEFAULT_REFRESH_CIRCLE,
     MAX_IMAGE_SIZE,
+    IMAGE_CLEAR_INTERVAL,
 } = require('./constant');
 
 async function selectImageBySize(imgUrls, maxSize, maxNumImg) {
@@ -113,11 +115,18 @@ async function tryDownloadAllImageWithTimeout(
             ) {
                 throw new Error('Failed to create folder for saving image');
             }
+            //  clear old images
+            const lastClearDate = getFileMTime(dst);
+            if (
+                lastClearDate &&
+                Date.now() - lastClearDate > IMAGE_CLEAR_INTERVAL
+            ) {
+                $file.delete(dst);
+            }
             // create dst folder
             if (!$file.exists(dst) && !$file.mkdir(dst)) {
                 throw new Error('Failed to create folder for saving image');
             }
-            // TODO: clear old images
         }
         const downloadResults = await doWithTimeout(
             () => Promise.allSettled(items.map(downloadImage.bind(null, dst))),

@@ -19,6 +19,8 @@ const POST_INFO_TIMEOUT = 10000;
 const IMAGE_TIMEOUT = 10000;
 // 图片下载路径
 const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
+// 图片清理间隔
+const IMAGE_CLEAR_INTERVAL = 7 * 24 * 60 * 60000; // 7 day
 // 最大允许的图片尺寸
 const MAX_IMAGE_SIZE = 500 * 1000; // 500KB
 // 默认设置
@@ -32,6 +34,7 @@ module.exports = {
     BG_CONTENT_OPACITY_DARK,
     DEBUG,
     DEFAULT_REFRESH_CIRCLE,
+    IMAGE_CLEAR_INTERVAL,
     IMAGE_DOWNLOAD_DIR,
     IMAGE_HEIGHT,
     IMAGE_TIMEOUT,
