@@ -239,13 +239,14 @@ function renderPreferences() {
         type: 'view',
         views: [
             renderSlider(
-                '刷新周期',
+                '最短刷新周期',
                 '分钟',
                 $prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE,
                 1,
                 120,
                 (sender) => {
-                    const oldVal = $prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE;
+                    const oldVal =
+                        $prefs.get('refresh-circle') ?? DEFAULT_REFRESH_CIRCLE;
                     const newVal = Math.round(sender.value / 5) * 5 || 1;
                     if (oldVal != newVal) {
                         $prefs.set('refresh-circle', newVal);
