@@ -65,28 +65,29 @@ async function tryDownloadAllImageWithTimeout(
     maxTime,
     partialDownloaded
 ) {
-    if (!partialDownloaded) {
-        // check the existence of dst folder
-        if (
-            !$file.exists(IMAGE_DOWNLOAD_DIR) &&
-            !$file.mkdir(IMAGE_DOWNLOAD_DIR)
-        ) {
-            throw new Error('Failed to create folder for saving image');
-        }
-        // delete old images
-        $file.delete(dst);
-        // create dst folder
-        if (!$file.mkdir(dst)) {
-            throw new Error('Failed to create folder for saving image');
-        }
-    }
     try {
+        if (!partialDownloaded) {
+            // check the existence of dst folder
+            if (
+                !$file.exists(IMAGE_DOWNLOAD_DIR) &&
+                !$file.mkdir(IMAGE_DOWNLOAD_DIR)
+            ) {
+                throw new Error('Failed to create folder for saving image');
+            }
+            // delete old images
+            $file.delete(dst);
+            // create dst folder
+            if (!$file.mkdir(dst)) {
+                throw new Error('Failed to create folder for saving image');
+            }
+        }
         const downloadResults = await doWithTimeout(
             () => Promise.allSettled(items.map(downloadImage.bind(null, dst))),
             maxTime
         );
         return downloadResults.every((v) => v === true);
     } catch (e) {
+        // 主要为超时
         console.error(e);
         return false;
     }
