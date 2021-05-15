@@ -15,23 +15,6 @@ async function fetchTiebaHtml(tiebaName) {
     return tiebaHtml;
 }
 
-// 使用cheerio会导致小组件卡死，可能是因为cpu超时
-// async function getTiebaPostInfo(tiebaName) {
-//     const tiebaHtml = await fetchTiebaHtml(tiebaName);
-//     const $$ = cheerio.load(tiebaHtml);
-//     // 获取各项信息
-//     return $$('ul#thread_list>li.j_thread_list') // 必须使用“>”获取直接子元素，否则会包含顶置贴
-//         .map((_idx, elem) => ({
-//             title: $$('a.j_th_tit', elem).text().trim(),
-//             link:
-//                 'https://tieba.baidu.com' + $$('a.j_th_tit', elem).attr('href'),
-//             author: $$('span.tb_icon_author', elem).attr('title').slice(6),
-//             abstract: $$('.threadlist_abs', elem).text().trim(),
-//             imgUrl: $$('.threadlist_media img', elem).data('original'),
-//         }))
-//         .get();
-// }
-
 function htmlEntityReplace(s) {
     return s
         .replace(/&lt;/g, '<')
