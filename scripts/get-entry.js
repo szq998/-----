@@ -26,12 +26,18 @@ async function selectImageBySize(imgUrls, maxSize, maxNumImg) {
     }
     return selected;
 }
-
+/*
+ * @description 下载一个贴子所需的图片，有摘要时最多下载一张，无摘要时最多下载三张。下载照片前首先获取图片尺寸，滤除过大的照片。
+ * @param dst {string} 下载目录
+ * @param item {object} 贴子数据，可能有imgDownloaded属性表示图片是否已经加载完毕、可能有imgPaths表示部分下在成功的图片、imgUrls数组存储所有图片url、abstract属性表示贴子摘要
+ * @return {bool} 指示下载是否成功
+ */
 async function downloadImage(dst, item) {
     if (item.imgDownloaded || item.imgUrls.length === 0) {
         // 图片已经下载完毕或者本就没有图片
         return true;
-    } else {
+    }
+    try {
         // 有摘要只显示一张图片，无摘要最多显示三张
         const maxNumImg = item.abstract ? 1 : 3;
         // 只获取较小尺寸的图片，防止超出小组件的资源限制，导致卡死
@@ -65,41 +71,51 @@ async function downloadImage(dst, item) {
             }
             return true;
         });
-        try {
-            await Promise.all(
-                shownImgUrls.map(async (url) => {
-                    // download
-                    const {
-                        response: { statusCode, error },
-                        rawData: data,
-                    } = await $http.get({ url });
-                    if (error) {
-                        throw error;
-                    }
-                    if (statusCode !== 200) {
-                        throw new Error(
-                            'Image download failed with status code ' +
-                                statusCode
-                        );
-                    }
-                    // write to disk
-                    const name = url.split('/').slice(-1)[0];
-                    const path = `${dst}/${name}`;
-                    const success = $file.write({ path, data });
-                    if (success) {
-                        item.imgPaths.push(path);
-                    }
-                })
-            );
-            item.imgDownloaded = true;
-            return true;
-        } catch (err) {
-            console.error(err);
-            return false;
-        }
+        await Promise.all(
+            shownImgUrls.map(async (url) => {
+                // download
+                const {
+                    response: { statusCode, error },
+                    rawData: data,
+                } = await $http.get({ url });
+                if (error) {
+                    throw error;
+                }
+                if (statusCode !== 200) {
+                    throw new Error(
+                        `Image from "${url}" download failed with status code ${statusCode}`
+                    );
+                }
+                // write to disk
+                const name = url.split('/').slice(-1)[0];
+                const path = `${dst}/${name}`;
+                const success = $file.write({ path, data });
+                if (success) {
+                    item.imgPaths.push(path);
+                } else {
+                    throw new Error(
+                        `Failed to write image data from "${url}" to "${path}"`
+                    );
+                }
+            })
+        );
+        // 使用Promise.all，所以任何出错都会跳转到catch块，下面两行代码就不会执行
+        item.imgDownloaded = true;
+        return true;
+    } catch (err) {
+        console.error(err);
+        return false;
     }
 }
 
+/*
+ * @description 在限定时间内下载图片
+ * @param dst {string} 下载目录
+ * @param items {Array} 所有要下载图片的贴子数据
+ * @param maxTime {number} 限定时间，单位毫秒
+ * @param partialDownloaded {bool} 若为true，则之前尝试过下载，可能有部分数据已在本地，则不进行目标目录存在性的检测和过期图片的清理
+ * @return {bool} 指示下载是否成功
+ */
 async function tryDownloadAllImageWithTimeout(
     dst,
     items,
@@ -129,6 +145,7 @@ async function tryDownloadAllImageWithTimeout(
             }
         }
         const downloadResults = await doWithTimeout(
+            // 使用allSettled而不是all，为了尽可能多加载图片，防止一个出错而使加载停止，即使downloadImage几乎捕获了所有错误
             () => Promise.allSettled(items.map(downloadImage.bind(null, dst))),
             maxTime
         );
