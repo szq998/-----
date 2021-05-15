@@ -10,6 +10,8 @@ const {
     DEFAULT_REFRESH_CIRCLE,
     MAX_IMAGE_SIZE,
     IMAGE_CLEAR_INTERVAL,
+    DEBUG,
+    LOG_DIR,
 } = require('./constant');
 
 async function selectImageBySize(imgUrls, maxSize, maxNumImg) {
@@ -103,7 +105,19 @@ async function downloadImage(dst, item) {
         item.imgDownloaded = true;
         return true;
     } catch (err) {
-        console.error(err);
+        if (DEBUG) {
+            console.error(err);
+            const errStr = JSON.stringify({
+                message: err.message,
+                stack: err.stack,
+                dst,
+                item,
+            });
+            $file.write({
+                data: $data({ string: errStr }),
+                path: `${LOG_DIR}/downloadImage-${new Date()}.json`,
+            });
+        }
         return false;
     }
 }
@@ -150,9 +164,21 @@ async function tryDownloadAllImageWithTimeout(
             maxTime
         );
         return downloadResults.every((v) => v === true);
-    } catch (e) {
+    } catch (err) {
         // 主要为超时
-        console.error(e);
+        if (DEBUG) {
+            console.error(err);
+            const errStr = JSON.stringify({
+                message: err.message,
+                stack: err.stack,
+                dst,
+                items,
+            });
+            $file.write({
+                data: $data({ string: errStr }),
+                path: `${LOG_DIR}/tryDownloadAllImageWithTimeout-${new Date()}.json`,
+            });
+        }
         return false;
     }
 }
@@ -165,9 +191,20 @@ async function tryGetTiebaPostWithTimeout(tiebaName, maxTime, maxNumPost) {
             tiebaName,
             maxNumPost
         );
-    } catch (e) {
+    } catch (err) {
         // 主要为超时
-        console.error(e);
+        if (DEBUG) {
+            console.error(err);
+            const errStr = JSON.stringify({
+                tiebaName,
+                message: err.message,
+                stack: err.stack,
+            });
+            $file.write({
+                data: $data({ string: errStr }),
+                path: `${LOG_DIR}/tryGetTiebaPostWithTimeout-${new Date()}.json`,
+            });
+        }
         return null;
     }
 }
