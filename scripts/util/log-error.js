@@ -1,4 +1,4 @@
-const { LOG_DIR } = require('./constant');
+const { LOG_DIR } = require('../constant');
 
 function logError(errorInfo, logName) {
     $file.write({
