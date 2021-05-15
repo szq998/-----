@@ -1,6 +1,6 @@
 // debug
 const DEBUG = true;
-const LOG_DIR = 'assets/log';
+const LOG_DIR = 'log';
 // 贴子显示设置
 const TITLE_FONT_SIZE = 13;
 const ABSTRACT_FONT_SIZE = 10;
