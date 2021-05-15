@@ -19,10 +19,10 @@ async function selectImageBySize(imgUrls, maxSize, maxNumImg) {
     for (let i = 0; i < imgUrls.length && selected.length < maxNumImg; ++i) {
         const url = imgUrls[i];
         const {
-            response: { expectedContentLength: len },
+            response: { expectedContentLength: len, error },
         } = await $http.request({ method: 'HEAD', url });
 
-        if (typeof len === 'number' && len <= maxSize) {
+        if (!error && len && len <= maxSize) {
             selected.push(url);
         }
     }
@@ -39,87 +39,88 @@ async function downloadImage(dst, item) {
         // 图片已经下载完毕或者本就没有图片
         return true;
     }
-    try {
-        // 有摘要只显示一张图片，无摘要最多显示三张
-        const maxNumImg = item.abstract ? 1 : 3;
-        // 只获取较小尺寸的图片，防止超出小组件的资源限制，导致卡死
-        let shownImgUrls = await selectImageBySize(
-            item.imgUrls,
-            MAX_IMAGE_SIZE,
-            maxNumImg
-        );
-        if (!shownImgUrls.length) {
-            // 没有符合的图片
-            item.imgDownloaded = true;
-            return true;
-        }
-        // 创建imgPaths数组
-        if (!item.imgPaths) {
-            item.imgDownloaded = false;
-            item.imgPaths = [];
-        }
-        // 去除已经下载的图片
-        shownImgUrls = shownImgUrls.filter((url) => {
-            const name = url.split('/').slice(-1)[0];
-            const path = `${dst}/${name}`;
-            if (item.imgPaths.indexOf(path) !== -1) {
-                // 图片已经下载且加入到了imgPaths中
-                return false;
-            }
-            if ($file.exists(path)) {
-                // 图片之前下载了，但没有在imgPaths中
-                item.imgPaths.push(path);
-                return false;
-            }
-            return true;
-        });
-        await Promise.all(
-            shownImgUrls.map(async (url) => {
-                // download
-                const {
-                    response: { statusCode, error },
-                    rawData: data,
-                } = await $http.get({ url });
-                if (error) {
-                    throw error;
-                }
-                if (statusCode !== 200) {
-                    throw new Error(
-                        `Image from "${url}" download failed with status code ${statusCode}`
-                    );
-                }
-                // write to disk
-                const name = url.split('/').slice(-1)[0];
-                const path = `${dst}/${name}`;
-                const success = $file.write({ path, data });
-                if (success) {
-                    item.imgPaths.push(path);
-                } else {
-                    throw new Error(
-                        `Failed to write image data from "${url}" to "${path}"`
-                    );
-                }
-            })
-        );
-        // 使用Promise.all，所以任何出错都会跳转到catch块，下面两行代码就不会执行
+    // 有摘要只显示一张图片，无摘要最多显示三张
+    const maxNumImg = item.abstract ? 1 : 3;
+    // 只获取较小尺寸的图片，防止超出小组件的资源限制，导致卡死
+    let shownImgUrls = await selectImageBySize(
+        item.imgUrls,
+        MAX_IMAGE_SIZE,
+        maxNumImg
+    );
+    if (!shownImgUrls.length) {
+        // 没有符合的图片
         item.imgDownloaded = true;
         return true;
-    } catch (err) {
-        if (DEBUG) {
-            console.error(err);
-            const errStr = JSON.stringify({
-                message: err.message,
-                stack: err.stack,
-                dst,
-                item,
-            });
-            $file.write({
-                data: $data({ string: errStr }),
-                path: `${LOG_DIR}/downloadImage-${new Date()}.json`,
-            });
-        }
-        return false;
     }
+    // 创建imgPaths数组
+    if (!item.imgPaths) {
+        item.imgDownloaded = false;
+        item.imgPaths = [];
+    }
+    // 去除已经下载的图片
+    shownImgUrls = shownImgUrls.filter((url) => {
+        const name = url.split('/').slice(-1)[0];
+        const path = `${dst}/${name}`;
+        if (item.imgPaths.indexOf(path) !== -1) {
+            // 图片已经下载且加入到了imgPaths中
+            return false;
+        }
+        if ($file.exists(path)) {
+            // 图片之前下载了，但没有在imgPaths中
+            item.imgPaths.push(path);
+            return false;
+        }
+        return true;
+    });
+    const downloadResults = await Promise.allSettled(
+        shownImgUrls.map(async (url) => {
+            // download
+            const {
+                response: { statusCode, error },
+                rawData: data,
+            } = await $http.get({ url });
+            if (error) {
+                throw error;
+            }
+            if (statusCode !== 200) {
+                throw new Error(
+                    `Image from "${url}" download failed with status code ${statusCode}`
+                );
+            }
+            // write to disk
+            const name = url.split('/').slice(-1)[0];
+            const path = `${dst}/${name}`;
+            const success = $file.write({ path, data });
+            if (success) {
+                item.imgPaths.push(path);
+                return true;
+            } else {
+                throw new Error(
+                    `Failed to write image data from "${url}" to "${path}"`
+                );
+            }
+        })
+    );
+    // 使用Promise.allSettled，一张图片下载失败不会影响其他图片
+    if (downloadResults.every((v) => v === true)) {
+        item.imgDownloaded = true;
+        return true;
+    } else if (DEBUG) {
+        // 记录错误
+        const errors = downloadResults.map((v) => v !== true);
+        console.error(errors);
+
+        const errorInfoArr = errors.map((err) => ({
+            message: err.message,
+            stack: err.stack,
+        }));
+        const errStr = JSON.stringify({ errors: errorInfoArr, dst, item });
+        $file.write({
+            data: $data({ string: errStr }),
+            path: `${LOG_DIR}/downloadImage-${new Date()}.json`,
+        });
+    }
+    return false;
 }
 
 /*
