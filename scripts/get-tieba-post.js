@@ -1,4 +1,5 @@
-const { DEBUG, LOG_DIR } = require('./constant');
+const { DEBUG } = require('./constant');
+const logError = require('./util/log-error');
 
 async function fetchTiebaHtml(tiebaName) {
     const tiebaURL = `https://tieba.baidu.com/f?kw=${encodeURIComponent(
@@ -44,7 +45,7 @@ async function getTiebaPostInfo(tiebaName, maxItem) {
         /<div[^>]*class="[^">]*threadlist_video[^">]*"[^>]*><img src="(?<imgUrl>[^"]+)"/s;
 
     const info = [];
-    const errors = [];
+    const errorInfoArr = [];
     let execArr;
     while ((execArr = rawPostRegex.exec(tiebaHtml)) !== null && maxItem--) {
         const rawPost = execArr[1];
@@ -83,18 +84,15 @@ async function getTiebaPostInfo(tiebaName, maxItem) {
             if (DEBUG) {
                 console.log(rawPost);
                 console.error(err);
-                errors.push({
+                errorInfoArr.push({
                     error: { message: err.message, stack: err.stack },
                     rawPost,
                 });
             }
         }
     }
-    if (DEBUG && errors.length) {
-        $file.write({
-            data: $data({ string: JSON.stringify(errors) }),
-            path: `${LOG_DIR}/get-tieba-post-${tiebaName}-${new Date()}.json`,
-        });
+    if (DEBUG && errorInfoArr.length) {
+        logError(errorInfoArr, `get-tieba-post-${tiebaName}`);
     }
     return info.length ? info : null;
 }

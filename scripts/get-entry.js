@@ -1,6 +1,7 @@
 const getTiebaPost = require('./get-tieba-post');
 const doWithTimeout = require('./util/do-with-timeout');
 const getFileMTime = require('./util/get-file-mtime');
+const logError = require('./util/log-error');
 
 const {
     POST_INFO_TIMEOUT,
@@ -11,7 +12,6 @@ const {
     MAX_IMAGE_SIZE,
     IMAGE_CLEAR_INTERVAL,
     DEBUG,
-    LOG_DIR,
 } = require('./constant');
 
 async function selectImageBySize(imgUrls, maxSize, maxNumImg) {
@@ -114,11 +114,7 @@ async function downloadImage(dst, item) {
             message: err.message,
             stack: err.stack,
         }));
-        const errStr = JSON.stringify({ errors: errorInfoArr, dst, item });
-        $file.write({
-            data: $data({ string: errStr }),
-            path: `${LOG_DIR}/downloadImage-${new Date()}.json`,
-        });
+        logError({ dst, item, errors: errorInfoArr }, 'downloadImage');
     }
     return false;
 }
@@ -169,16 +165,13 @@ async function tryDownloadAllImageWithTimeout(
         // 主要为超时
         if (DEBUG) {
             console.error(err);
-            const errStr = JSON.stringify({
+            const errorInfo = {
                 message: err.message,
                 stack: err.stack,
                 dst,
                 items,
-            });
-            $file.write({
-                data: $data({ string: errStr }),
-                path: `${LOG_DIR}/tryDownloadAllImageWithTimeout-${new Date()}.json`,
-            });
+            };
+            logError(errorInfo, 'tryDownloadAllImageWithTimeout');
         }
         return false;
     }
@@ -196,15 +189,8 @@ async function tryGetTiebaPostWithTimeout(tiebaName, maxTime, maxNumPost) {
         // 主要为超时
         if (DEBUG) {
             console.error(err);
-            const errStr = JSON.stringify({
-                tiebaName,
-                message: err.message,
-                stack: err.stack,
-            });
-            $file.write({
-                data: $data({ string: errStr }),
-                path: `${LOG_DIR}/tryGetTiebaPostWithTimeout-${new Date()}.json`,
-            });
+            const errorInfo = { message: err.message, stack: err.stack };
+            logError(errorInfo, `tryGetTiebaPostWithTimeout-${tiebaName}`);
         }
         return null;
     }
