@@ -102,21 +102,70 @@ async function downloadImage(dst, item) {
         })
     );
     // 使用Promise.allSettled，一张图片下载失败不会影响其他图片
-    if (downloadResults.every((v) => v === true)) {
+    if (
+        downloadResults.every(
+            (v) => v.status === 'fulfilled' && v.value === true
+        )
+    ) {
         item.imgDownloaded = true;
         return true;
-    } else if (DEBUG) {
-        // 记录错误
-        const errors = downloadResults.map((v) => v !== true);
-        console.error(errors);
+    } else {
+        if (DEBUG) {
+            // 滤出错误
+            const errors = downloadResults
+                .filter((v) => v.status === 'rejected')
+                .map((v) => v.reason);
+            if (!errors.length) {
+                // 没有错误要记录
+                return false;
+            }
+            console.error(errors);
 
-        const errorInfoArr = errors.map((err) => ({
-            message: err.message,
-            stack: err.stack,
-        }));
-        logError({ dst, item, errors: errorInfoArr }, 'downloadImage');
+            const errorInfoArr = errors.map((err) => ({
+                message: err.message,
+                stack: err.stack,
+            }));
+            logError({ dst, item, errors: errorInfoArr }, 'downloadImage');
+        }
+        return false;
     }
-    return false;
+}
+
+function prepareForImageDownload(dst) {
+    try {
+        // check the existence of image dir
+        if (
+            !$file.exists(IMAGE_DOWNLOAD_DIR) &&
+            !$file.mkdir(IMAGE_DOWNLOAD_DIR)
+        ) {
+            throw new Error(
+                `Failed to create folder "${IMAGE_DOWNLOAD_DIR}" for saving image`
+            );
+        }
+        //  clear old images
+        const lastClearDate = getFileMTime(dst);
+        if (
+            lastClearDate &&
+            Date.now() - lastClearDate > IMAGE_CLEAR_INTERVAL
+        ) {
+            $file.delete(dst);
+        }
+        // check the existence of dst
+        if (!$file.exists(dst) && !$file.mkdir(dst)) {
+            throw new Error(
+                `Failed to create folder "${dst}" for saving image`
+            );
+        }
+        return true;
+    } catch (err) {
+        // 主要为超时
+        if (DEBUG) {
+            console.error(err);
+            const errorInfo = { message: err.message, stack: err.stack };
+            logError(errorInfo, 'prepareForImageDownload');
+        }
+        return false;
+    }
 }
 
 /*
@@ -133,47 +182,31 @@ async function tryDownloadAllImageWithTimeout(
     maxTime,
     partialDownloaded
 ) {
+    if (!partialDownloaded && !prepareForImageDownload(dst)) {
+        return false;
+    }
+
     try {
-        if (!partialDownloaded) {
-            // check the existence of dst folder
-            if (
-                !$file.exists(IMAGE_DOWNLOAD_DIR) &&
-                !$file.mkdir(IMAGE_DOWNLOAD_DIR)
-            ) {
-                throw new Error('Failed to create folder for saving image');
-            }
-            //  clear old images
-            const lastClearDate = getFileMTime(dst);
-            if (
-                lastClearDate &&
-                Date.now() - lastClearDate > IMAGE_CLEAR_INTERVAL
-            ) {
-                $file.delete(dst);
-            }
-            // create dst folder
-            if (!$file.exists(dst) && !$file.mkdir(dst)) {
-                throw new Error('Failed to create folder for saving image');
-            }
-        }
         const downloadResults = await doWithTimeout(
             // 使用allSettled而不是all，为了尽可能多加载图片，防止一个出错而使加载停止，即使downloadImage几乎捕获了所有错误
             () => Promise.allSettled(items.map(downloadImage.bind(null, dst))),
             maxTime
         );
-        return downloadResults.every((v) => v === true);
+        return downloadResults.every(
+            (v) => v.status === 'fulfilled' && v.value === true
+        );
     } catch (err) {
         // 主要为超时
         if (DEBUG) {
-            console.error(err);
+            console.log(err);
             const errorInfo = {
+                dst,
                 message: err.message,
                 stack: err.stack,
-                dst,
                 items,
             };
             logError(errorInfo, 'tryDownloadAllImageWithTimeout');
         }
-        return false;
     }
 }
 
