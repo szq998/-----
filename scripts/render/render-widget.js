@@ -7,6 +7,8 @@ const {
     IMAGE_HEIGHT,
     BG_CONTENT_OPACITY_LIGHT,
     BG_CONTENT_OPACITY_DARK,
+    TITLE_DETAIL_SPACING,
+    TITLE_MINIMUM_SCALE_FACTOR,
 } = require('../constant');
 
 function renderWidget(tiebaName, link, ctx, geometry) {
@@ -100,7 +102,7 @@ function renderItem(itemWidth, itemHeight, item) {
     return {
         type: 'vstack',
         props: {
-            spacing: 1.5,
+            spacing: TITLE_DETAIL_SPACING,
             link: $prefs.get('open-in-safari')
                 ? link
                 : getLinkOpenedInJSBox(link),
@@ -130,7 +132,7 @@ function renderItemTitle(title, lineLimit) {
                 maxWidth: Infinity,
                 alignment: $widget.alignment.leading,
             },
-            minimumScaleFactor: 0.8,
+            minimumScaleFactor: TITLE_MINIMUM_SCALE_FACTOR,
         },
     };
 }
@@ -197,7 +199,6 @@ function renderItemDetailAbstract(abstract) {
                 height: IMAGE_HEIGHT,
                 alignment: $widget.alignment.topLeading,
             },
-            minimumScaleFactor: 0.8,
         },
     };
 }
