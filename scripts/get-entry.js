@@ -11,6 +11,7 @@ const {
     DEFAULT_REFRESH_CIRCLE,
     MAX_IMAGE_SIZE,
     IMAGE_CLEAR_INTERVAL,
+    MAX_ABSTRACT_LEN_ALLOWING_TWO_IMAGES,
     DEBUG,
 } = require('./constant');
 
@@ -39,8 +40,12 @@ async function downloadImage(dst, item) {
         // 图片已经下载完毕或者本就没有图片
         return true;
     }
-    // 有摘要只显示一张图片，无摘要最多显示三张
-    const maxNumImg = item.abstract ? 1 : 3;
+    // 无摘要最多显示三张图片, 有摘要酌情显示两张或一张图片
+    const maxNumImg = !item.abstract
+        ? 3
+        : item.abstract.length < MAX_ABSTRACT_LEN_ALLOWING_TWO_IMAGES
+        ? 2
+        : 1;
     // 只获取较小尺寸的图片，防止超出小组件的资源限制，导致卡死
     let shownImgUrls = await selectImageBySize(
         item.imgUrls,

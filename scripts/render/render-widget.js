@@ -9,6 +9,7 @@ const {
     BG_CONTENT_OPACITY_DARK,
     TITLE_DETAIL_SPACING,
     TITLE_MINIMUM_SCALE_FACTOR,
+    MAX_ABSTRACT_LEN_ALLOWING_TWO_IMAGES,
 } = require('../constant');
 
 function renderWidget(tiebaName, link, ctx, geometry) {
@@ -137,29 +138,26 @@ function renderItemTitle(title, lineLimit) {
     };
 }
 
-function renderItemDetail(abstract, imgPaths = null) {
+function renderItemDetail(abstract, imgPaths = []) {
     if (abstract) {
+        // 根据abstract长度，决定图片数量
+        const maxImgNum =
+            abstract.length <= MAX_ABSTRACT_LEN_ALLOWING_TWO_IMAGES ? 2 : 1;
         return {
             type: 'hstack',
-            props: {
-                spacing: 3,
-                frame: { maxWidth: Infinity },
-            },
+            props: { spacing: 2, frame: { maxWidth: Infinity } },
             views: [
                 renderItemDetailAbstract(abstract),
-                imgPaths ? renderItemDetailImage(imgPaths[0]) : null,
-                // only one image
-            ].filter((v) => v !== null),
+                ...imgPaths.slice(0, maxImgNum).map(renderItemDetailImage),
+            ],
         };
-    } else if (imgPaths?.length) {
+    } else if (imgPaths.length) {
+        // 无abstract且有图片
         const imgLen = imgPaths.length;
         // 当显示2张图片时，内容是靠前(leading)堆放，使用spacer制造缩进
         const space =
             imgLen === 2
-                ? {
-                      type: 'spacer',
-                      props: { frame: { width: 0 } }, // 0宽，缩进实际来源于hstack的spacing
-                  }
+                ? { type: 'spacer', props: { frame: { width: 0 } } } // 0宽，缩进实际来源于hstack的spacing
                 : null;
         return {
             type: 'hstack',
@@ -217,10 +215,7 @@ function renderItemDetailImage(imgPath) {
             path: imgPath,
             resizable: true,
             scaledToFill: true,
-            frame: {
-                width: IMAGE_HEIGHT * (3 / 2),
-                height: IMAGE_HEIGHT,
-            },
+            frame: { width: IMAGE_HEIGHT * (3 / 2), height: IMAGE_HEIGHT },
         },
     };
 }

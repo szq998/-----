@@ -20,11 +20,13 @@ const MAX_NUMBER_OF_POST = 20;
 // 超时控制
 const POST_INFO_TIMEOUT = 10000;
 const IMAGE_TIMEOUT = 10000;
+// 最大允许显示两张图片的摘要长度
+const MAX_ABSTRACT_LEN_ALLOWING_TWO_IMAGES = 10;
 // 图片下载路径
 const IMAGE_DOWNLOAD_DIR = 'assets/post-images';
 // 图片清理间隔时间
 const IMAGE_CLEAR_INTERVAL = 7 * 24 * 60 * 60000; // 7 day
-// 最大可加载的图片尺寸
+// 最大可加载的图片大小
 const MAX_IMAGE_SIZE = 500 * 1000; // 500KB
 // 默认刷新周期设置
 const DEFAULT_REFRESH_CIRCLE = 30;
@@ -43,6 +45,7 @@ module.exports = {
     IMAGE_TIMEOUT,
     ITEM_CONTENT_HEIGHT,
     LOG_DIR,
+    MAX_ABSTRACT_LEN_ALLOWING_TWO_IMAGES,
     MAX_NUMBER_OF_POST,
     MAX_IMAGE_SIZE,
     MIN_ITEM_HEIGHT,
