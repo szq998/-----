@@ -40,8 +40,8 @@ async function mainWidget(tiebaName = $widget.inputValue, forceLoad = false) {
             // and item height
             const [itemPerColumn, itemHeight] =
                 estimateItemPerColumnAndItemHeight(displaySize.height);
-
-            const numColumn = family === 0 ? 1 : 2;
+            // 1 column under 1x1; 2 colum under 2x1 or 2x2; 3 colum under 4x2
+            const numColumn = family === 0 ? 1 : family === 3 ? 3 : 2;
             const itemWidth =
                 (displaySize.width - 10 * (2 + numColumn - 1)) / numColumn;
 

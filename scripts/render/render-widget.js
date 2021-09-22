@@ -37,7 +37,8 @@ function renderFixedItem(family, itemWidth, tiebaName) {
         props: {
             text: tiebaName + '吧',
             frame: { width: itemWidth },
-            font: $font('bold', family === 2 ? 26 : 20),
+            // larger font under 2x2 and 4x2
+            font: $font('bold', family >= 2 ? 26 : 20),
             minimumScaleFactor: 0.3,
         },
     };
@@ -89,14 +90,14 @@ function renderPosts(items, tiebaName, family, geometry) {
             family === 0 ? renderFixedItem(family, itemWidth, tiebaName) : null,
             ...items
                 .slice(0, itemPerColumn * numColumn - 1)
-                .map(renderItem.bind(null, itemWidth, itemHeight)),
+                .map(renderItem.bind(null, family, itemWidth, itemHeight)),
             // 其他尺寸下，贴吧名放在末尾
             family !== 0 ? renderFixedItem(family, itemWidth, tiebaName) : null,
         ].filter((v) => v !== null),
     };
 }
 
-function renderItem(itemWidth, itemHeight, item) {
+function renderItem(family, itemWidth, itemHeight, item) {
     const { title, link, abstract, imgPaths } = item; // imgPaths可能不存在
     // 没有摘要和图片时，标题最多可以有两行
     const titleLineLimit = abstract || imgPaths?.length ? 1 : 2;
@@ -116,7 +117,7 @@ function renderItem(itemWidth, itemHeight, item) {
         },
         views: [
             renderItemTitle(title, titleLineLimit),
-            renderItemDetail(abstract, imgPaths),
+            renderItemDetail(family, abstract, imgPaths),
         ].filter((v) => v !== null),
     };
 }
@@ -138,7 +139,7 @@ function renderItemTitle(title, lineLimit) {
     };
 }
 
-function renderItemDetail(abstract, imgPaths = []) {
+function renderItemDetail(family, abstract, imgPaths = []) {
     if (abstract) {
         // 根据abstract长度，决定图片数量
         const maxImgNum =
@@ -154,24 +155,23 @@ function renderItemDetail(abstract, imgPaths = []) {
     } else if (imgPaths.length) {
         // 无abstract且有图片
         const imgLen = imgPaths.length;
-        // 当显示2张图片时，内容是靠前(leading)堆放，使用spacer制造缩进
+        // 内容靠前(leading)堆放时，使用spacer制造缩进
         const space =
-            imgLen === 2
+            imgLen === 2 || (imgLen === 3 && family === 3)
                 ? { type: 'spacer', props: { frame: { width: 0 } } } // 0宽，缩进实际来源于hstack的spacing
                 : null;
         return {
             type: 'hstack',
             props: {
-                spacing: imgLen === 3 ? 5 : 10,
+                spacing: (imgLen === 3 && family !== 3) ? 5 : 10,
                 frame: {
                     maxWidth: Infinity,
                     alignment:
-                        // 一张图片时，靠后(trailing)堆放；两张图片时，靠前(leading)堆放；三张图片时，居中
                         imgLen === 1
-                            ? $widget.alignment.trailing
-                            : imgLen === 2
-                            ? $widget.alignment.leading
-                            : $widget.alignment.center,
+                            ? $widget.alignment.trailing  // 一张图片时，靠后(trailing)堆放
+                            : imgLen === 2 || family === 3
+                            ? $widget.alignment.leading  // 两张图片，或者4x2尺寸时，靠前(leading)堆放
+                            : $widget.alignment.center,  // 三张图片，并且小于4x2尺寸时，居中
                 },
             },
             views: [
